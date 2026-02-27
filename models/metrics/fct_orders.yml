@@ -17,6 +17,9 @@ semantic_models:
         type_params:
           time_granularity: day
     measures:
+      - name: min_order_value
+        agg: min
+        expr: order_total
       - name: order_total
         description: The total amount for each order including taxes.
         agg: sum

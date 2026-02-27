@@ -26,6 +26,10 @@ semantic_models:
       - name: is_drink_item
         type: categorical
     measures:
+      - name: median_revenue
+        description: the median revenue generated for each order item
+        agg: median
+        expr: product_price
       - name: revenue
         description: The revenue generated for each order item. Revenue is calculated as a sum of revenue associated with each product in an order.
         agg: sum
