@@ -1,0 +1,85 @@
+models:
+  - name: fct_orders
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+    description: |
+      Order fact table. This table is at the order grain with one row per order.
+    columns:
+      ## entities
+      - name: order_id
+        entity:
+          type: primary
+          name: order_id
+      - name: customer_id
+        entity:
+          type: foreign
+          name: customer_id
+
+      ## dimensions
+      - name: order_date
+        dimension:
+          type: time
+        granularity: day
+      - name: amount ## this is a dimension because we intend to filter by it later
+        dimension:
+          type: categorical
+        
+    metrics: ## simple metrics
+      - name: order_total
+        description: The total amount for each order including taxes.
+        agg: sum
+        expr: amount
+      - name: order_count
+        expr: 1
+        agg: sum
+      - name: customers_with_orders
+        description: Distinct count of customers placing orders
+        agg: count_distinct
+        expr: customer_id
+      - name: order_value_p99
+        expr: order_total
+        agg: percentile
+        percentile: 0.99
+        percentile_type: continuous
+      - name: discrete_order_value_p99
+        expr: order_total
+        agg: percentile
+        percentile: 0.99
+        percentile_type: discrete
+      - name: large_orders
+        description: "Count of orders with order total over 20."
+        type: simple
+        agg: sum
+        label: "Large Orders"
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__order_total') }} >= 20
+     
+     
+metrics: ## advanced metrics
+
+#Ratio type metric
+  - name: avg_order_value
+    description: "average value of each order"
+    label: avg_order_value    
+    type: ratio
+    numerator: order_total
+    denominator: order_count    
+
+ #CUMULATIVE METRICS 
+  - name: "cumulative_order_amount_mtd"
+    label: "cumulative_order_amount_mtd"    
+    description: "The month to date value of all orders"
+    type: cumulative
+    input_metric: order_total
+    grain_to_date: month
+  # Derived metric
+  - name: "pct_of_orders_that_are_large"
+    label: "pct_of_orders_that_are_large"
+    description: "percent of orders that are large"
+    type: derived
+    expr: large_orders / order_count
+    input_metrics:
+      - name: large_orders
+      - name: order_count
