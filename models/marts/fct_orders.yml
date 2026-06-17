@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: Order fact model at one row per order with successful payment amount.
+    semantic_model:
+      enabled: true
+      name: fct_orders
+
+    agg_time_dimension: order_date
+
+    columns:
+      - name: order_id
+        description: Primary key for each order.
+        entity:
+          type: primary
+          name: orders
+
+      - name: customer_id
+        description: Customer associated with the order.
+        entity:
+          type: foreign
+          name: customer
+
+      ## dimensions
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: status
+        description: Current status of the order.
+        dimension:
+          type: categorical
+
+      - name: amount
+        description: Total successful payment amount for the order in dollars.
+        dimension: 
+          type: categorical
+
+    metrics:
+      - name: order_count
+        description: Count of orders.
+        type: simple
+        label: Order Count
+        agg: count
+        expr: 1
+
+      - name: total_order_amount
+        description: Sum of successful payment amount across orders.
+        type: simple
+        label: Total Order Amount
+        agg: sum
+        expr: amount
+
+      - name: average_order_amount
+        description: Average successful payment amount per order.
+        type: simple
+        label: Average Order Amount
+        agg: average
+        expr: amount
