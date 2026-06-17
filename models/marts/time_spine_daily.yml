@@ -1,0 +1,11 @@
+models:
+  - name: time_spine_daily
+    description: one row per calendar date from 5 years in the past to 30 days in the future
+    semantic_model:
+      enabled: true
+    time_spine:
+      standard_granularity_column: date_day  # The base column used for time joins
+    columns:
+      - name: date_day
+        description: calendar date at daily grain
+        granularity: day
