@@ -3,72 +3,77 @@ models:
     semantic_model:
       enabled: true
       name: orders
-      
     agg_time_dimension: order_date
-    
+
     columns:
       - name: order_id
         entity:
+          name: orders
           type: primary
-          name: order_id
+
       - name: customer_id
         entity:
           name: customer
           type: foreign
+
       - name: order_date
         granularity: day
         dimension:
           type: time
+
       - name: amount
+        description: Total successful payment amount captured for the order.
         dimension:
           type: categorical
-          
+
     metrics:
-      # Simple type metrics
       - name: order_total
-        description: Sum of orders value
-        type: simple
         label: Order total
+        description: Sum of successful payment amounts across orders.
+        type: simple
         agg: sum
         expr: amount
+
       - name: order_count
-        description: Number of orders
-        type: simple
         label: Order count
-        agg: sum
-        expr: 1
-      - name: customers_with_orders
-        description: Distinct count of customers placing orders
+        description: Count of orders.
         type: simple
+        agg: count
+        expr: order_id
+
+      - name: customers_with_orders
         label: Customers with orders
+        description: Distinct count of customers placing orders.
+        type: simple
         agg: count_distinct
         expr: customer_id
+
       - name: large_orders
-        description: Count of orders with order total over 20
-        type: simple
         label: Large orders
-        agg: sum
-        expr: 1
+        description: Count of orders with order total of at least 20.
+        type: simple
+        agg: count
+        expr: order_id
         filter: |
-          {{ Dimension('order_id__amount') }} >= 20
-      # Ratio type metric
+          {{ Dimension('orders__amount') }} >= 20
+
       - name: avg_order_value
         label: Average order value
-        description: Average value of each order
+        description: Average value of each order.
         type: ratio
         numerator: order_total
         denominator: order_count
-      # Cumulative type metrics
+
       - name: cumulative_order_amount_mtd
         label: Cumulative order amount MTD
-        description: The month to date value of all orders
+        description: Month-to-date value of all orders.
         type: cumulative
-        grain_to_date: month
         input_metric: order_total
-      # Derived metric
+        grain_to_date: month
+
       - name: pct_of_orders_that_are_large
         label: Percent of orders that are large
-        description: Percent of orders that are large
+        description: Percent of orders with order total of at least 20.
         type: derived
         expr: large_orders / order_count
         input_metrics:
