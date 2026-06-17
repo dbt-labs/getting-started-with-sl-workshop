@@ -104,9 +104,24 @@ metrics:
   - name: cumulative_revenue_l30d
     type: cumulative
     input_metric: revenue
-    window: 30d
+    window: 30 days  ## trailing 30 days
   
   - name: cumulative_revenue_mtd
     type: cumulative
     input_metric: revenue
     grain_to_date: month
+
+  - name: cumulative_revenue_all_tume
+    type: cumulative
+    input_metric: revenue
+
+  # derived metrics
+  - name: large_orders_percentage_derived
+    label: Derived metric calculating large order percentage
+    description: Percent of orders that are large
+    type: derived
+    expr: orders_over_twenty / distinct_orders
+    input_metrics:
+      - name: orders_over_twenty
+      - name: distinct_orders
+ 
