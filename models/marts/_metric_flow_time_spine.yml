@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: metric_flow_time_spine
+    description: daily time spine for semantic layer time-based joins and aggregations.
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        description: calendar date at day grain.
+        granularity: day
