@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: Fact table for orders with the customer, order date, and total successful payment amount.
+    columns:
+      - name: order_id
+        description: Primary key for each order.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: Unique identifier for the customer who placed the order.
+
+      - name: order_date
+        description: Date the order was placed.
+
+      - name: amount
+        description: Total amount of successful payments recorded for the order.
