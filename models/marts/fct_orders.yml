@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: one row per order with the customer, order date, and total successful payment amount.
+    columns:
+      - name: order_id
+        description: unique identifier for an order.
+      - name: customer_id
+        description: unique identifier for the customer who placed the order.
+      - name: order_date
+        description: date the order was placed.
+      - name: amount
+        description: total amount successfully paid for the order.
