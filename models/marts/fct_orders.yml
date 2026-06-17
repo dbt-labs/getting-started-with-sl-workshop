@@ -1,0 +1,102 @@
+models:
+  - name: fct_orders
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+    description: one row per order with the customer, order date, and successfully paid amount.
+    columns:
+      - name: order_id
+        description: unique identifier for an order.
+        data_tests:
+          - not_null
+          - unique
+        entity:
+          type: primary
+          name: order_id
+      - name: customer_id
+        description: unique identifier for the customer who placed the order.
+        data_tests:
+          - not_null
+        entity:
+          name: customer
+          type: foreign
+      - name: order_date
+        description: date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+        data_tests:
+          - not_null
+      - name: amount
+        description: total successfully paid amount for the order.
+        dimension:
+          type: categorical
+        data_tests:
+          - not_null
+    metrics:
+      - name: amount
+        type: simple
+        agg: sum
+      - name: avg_order_value
+        type: simple
+        agg: average
+        expr: amount
+      - name: distinct_customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+      - name: revenue
+        description: The total amount for each order including taxes
+        type: simple
+        label: Order total
+        agg: sum
+        expr: amount
+      - name: distinct_orders
+        type: simple
+        agg: count_distinct
+        expr: order_id
+      - name: order_value_p99
+        type: simple
+        agg: percentile
+        expr: amount
+        percentile: 99.0
+        percentile_type: discrete
+      - name: orders_over_twenty
+        type: simple
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount') }} >= 20
+
+metrics:
+  - name: large_orders_percentage
+    type: ratio
+    numerator: orders_over_twenty
+    denominator: distinct_orders
+
+  - name: average_order_value
+    label: ratio metric of ave
+    type: ratio
+    numerator: revenue
+    denominator: distinct_orders
+
+  - name: cumulative_revenue
+    type: cumulative
+    input_metric: revenue
+    window: 30 days
+
+  - name: cumulative_revenue_mtd
+    type: cumulative
+    input_metric: revenue
+    grain_to_date: month
+
+  - name: large_orders_percentage_derived
+    label: Percent of orders that are large
+    description: Percent of orders that are large
+    type: derived
+    expr: orders_over_twenty / distinct_orders
+    input_metrics:
+      - name: orders_over_twenty
+      - name: distinct_orders
+
+      - name: distinct_orders
