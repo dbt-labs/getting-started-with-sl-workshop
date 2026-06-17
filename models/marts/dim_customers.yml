@@ -1,0 +1,88 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: customer dimension containing one record per customer with core profile details and order history summary.
+    semantic_model: true
+    agg_time_dimension: first_order_date
+    metrics:
+      - name: customer_count
+        description: Total number of customers.
+        type: simple
+        label: Customer Count
+        agg: count_distinct
+        expr: customer_id
+      - name: customers_with_orders
+        description: Number of customers who have placed at least one order.
+        type: simple
+        label: Customers with Orders
+        agg: count_distinct
+        expr: customer_id
+        filter: |
+          {{ Dimension('customer__number_of_orders') }} > 0
+      - name: total_customer_lifetime_value
+        description: Total lifetime value across all customers.
+        type: simple
+        label: Total Customer Lifetime Value
+        agg: sum
+        expr: lifetime_value
+      - name: average_customer_lifetime_value
+        description: Average lifetime value per customer.
+        type: simple
+        label: Average Customer Lifetime Value
+        agg: average
+        expr: lifetime_value
+      - name: average_orders_per_customer
+        description: Average number of orders per customer.
+        type: simple
+        label: Average Orders per Customer
+        agg: average
+        expr: number_of_orders
+      - name: customers_with_lifetime_value_over_100
+        description: Number of customers with lifetime value greater than 100.
+        type: derived
+        label: Customers with Lifetime Value Over 100
+        expr: high_value_customers
+        input_metrics:
+          - name: customer_count
+            alias: high_value_customers
+            filter: |
+              {{ Dimension('customer__lifetime_value') }} > 100
+
+    columns:
+      - name: customer_id
+        description: unique identifier for a customer.
+        data_tests:
+          - not_null
+          - unique
+        entity:
+          name: customer
+          type: primary
+
+      - name: first_name
+        description: customer's first name.
+        dimension:
+          type: categorical
+      - name: last_name
+        description: customer's last name.
+        dimension:
+          type: categorical
+      - name: first_order_date
+        description: date of the customer's first order.
+        granularity: day
+        dimension:
+          type: time
+      - name: most_recent_order_date
+        description: date of the customer's most recent order.
+        granularity: day
+        dimension:
+          type: time
+      - name: number_of_orders
+        description: total number of orders placed by the customer.
+        dimension:
+          type: categorical
+      - name: lifetime_value
+        description: total successfully collected revenue from the customer across all orders.
+        dimension:
+          type: categorical
+
