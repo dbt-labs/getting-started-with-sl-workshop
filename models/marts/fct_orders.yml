@@ -1,0 +1,93 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+    description: orders fact table with one row per customer order and the amount successfully paid for that order.
+    columns:
+      - name: order_id
+        description: unique identifier for an order.
+        entity:
+          type: primary
+          name: order_id
+      - name: customer_id
+        description: unique identifier for the customer who placed the order.
+        entity:
+          name: customer
+          type: foreign
+      - name: order_date
+        description: date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+      - name: amount
+        description: total amount successfully paid for the order in dollars.
+        dimension:
+          type: categorical
+    metrics:
+      - name: order_total
+        description: Sum of orders value
+        type: simple
+        label: Order total
+        agg: sum
+        expr: amount
+
+      - name: order_count
+        description: Number of orders
+        type: simple
+        label: Order count
+        agg: sum
+        expr: 1
+
+      - name: distinct_orders
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+      - name: distinct_customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: customers_with_orders
+        description: Distinct count of customers placing orders
+        type: simple
+        label: Customers with orders
+        agg: count_distinct
+        expr: customer_id
+
+      - name: large_orders
+        description: Count of orders with order total over 20
+        type: simple
+        label: Large orders
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount') }} >= 20
+
+metrics:
+  - name: orders_per_customer
+    type: ratio
+    numerator: distinct_orders
+    denominator: distinct_customers
+  - name: average_order_value
+    label: Ratio metric of revenue divided by distinct orders
+    type: ratio
+    numerator: order_total
+    denominator: distinct_orders
+  
+  #cumulative metrics
+  - name: cumulative_order_total
+    type: cumulative
+    input_metric: order_total
+    grain_to_date: month
+
+  # derived metrics
+  - name: large_orders_pct_derived
+    type: derived
+    expr: large_orders / distinct_orders
+    input_metrics:
+      - name: large_orders
+      - name: distinct_orders
