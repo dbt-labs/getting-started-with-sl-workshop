@@ -76,7 +76,6 @@ models:
         expr: amount
         percentile: 0.99
         percentile_type: continuous
-
       - name: orders_over_20
         description: Count of orders with order total over 20
         type: simple
@@ -85,6 +84,17 @@ models:
         expr: 1
         filter: |
           {{ Dimension('order_id__amount') }} >= 20
+      - name: cumulative_order_amount_mtd
+        label: Cumulative order amount MTD
+        description: The month to date value of all orders
+        type: cumulative
+        grain_to_date: month
+        input_metric: order_total
+      - name: cumulative_order_amount_30d
+        type: cumulative
+        input_metric: order_total
+        window: 30 days
+
 ## Advanced Metrics
 metrics:
   ## Ratio Metric
@@ -98,19 +108,6 @@ metrics:
     type: ratio
     numerator: order_total
     denominator: order_count
-
-  ## Cumulative Metric
-  - name: cumulative_order_amount_mtd
-    label: Cumulative order amount MTD
-    description: The month to date value of all orders
-    type: cumulative
-    grain_to_date: month
-    input_metric: order_total
-  - name: cumulative_order_amount_30d
-    type: cumulative
-    input_metric: order_total
-    window: 30 days
-
   ## Derived Metric
   - name: large_orders_percentage_derived
     type: derived
@@ -129,7 +126,9 @@ saved_queries:
         - orders_over_20
         - large_orders_percentage_derived
       group_by:
-        - TimeDimension('__order_date', 'day')
+        - TimeDimension('order_id__order_date', 'day')
+
+
     exports:
       - name: order_metrics
         config: 
