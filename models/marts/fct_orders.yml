@@ -1,0 +1,83 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model:
+      enabled: true
+      name: orders
+      
+    agg_time_dimension: order_date
+    
+    columns:
+      # Entities
+      - name: order_id
+        entity:
+          type: primary
+          name: order_id
+      - name: customer_id
+        entity:
+          name: customer
+          type: foreign
+      # Dimensions      
+      - name: order_date
+        granularity: day
+        dimension:
+          type: time
+      - name: amount
+        dimension:
+          type: categorical
+ 
+    metrics:
+      - name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+
+      - name: avg_revenue
+        label: simple metric of average revenue
+        type: simple
+        agg: average
+        expr: amount
+
+      - name: distinct_orders
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+      - name: distinct_customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: orders_over_twenty
+        type: simple
+        agg: sum
+        expr: 1
+        filter: |
+          {{Dimension('order_id__amount')}} >= 20
+
+      #ratio
+      - name: average_order_value
+        type: ratio
+        numerator: revenue
+        denominator: distinct_orders
+
+      #cumulative
+      - name: cumulative_revenue_30d
+        type: cumulative
+        input_metric: revenue
+        window: 30 days
+
+      - name: cumulative_revenue_all_time
+        type: cumulative
+        input_metric: revenue
+
+      #derived
+      - name: order_per_customer
+        type: derived
+        expr: distinct_orders / distinct_customers
+        input_metrics:
+          - name: distinct_orders
+            alias: curr_distinct_orders
+          - name: distinct_customers
+            alias: curr_distinct_customers

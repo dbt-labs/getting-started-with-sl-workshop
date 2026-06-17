@@ -1,0 +1,67 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: one row per customer with core profile details and order history summary.
+    semantic_model: true
+    agg_time_dimension: first_order_date
+
+    columns:
+      - name: customer_id
+        description: unique identifier for a customer.
+        entity:
+          name: customer
+          type: primary
+      - name: first_name
+        description: customer's given name.
+        dimension:
+          type: categorical
+      - name: last_name
+        description: customer's family name.
+        dimension:
+          type: categorical
+      - name: first_order_date
+        description: date of the customer's first order.
+        granularity: day
+        dimension:
+          type: time
+      - name: most_recent_order_date
+        description: date of the customer's most recent order.
+        granularity: day
+        dimension:
+          type: time
+      - name: number_of_orders
+        description: total number of orders placed by the customer.
+      - name: lifetime_value
+        description: total revenue attributed to the customer across all orders.
+    metrics:
+      - name: customer_count
+        description: count of customers.
+        label: Customer Count
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: total_number_of_orders
+        description: total orders aggregated across customers.
+        label: Total Number of Orders
+        type: simple
+        agg: sum
+        expr: number_of_orders
+
+      - name: total_lifetime_value
+        description: total lifetime revenue aggregated across customers.
+        label: Total Lifetime Value
+        type: simple
+        agg: sum
+        expr: lifetime_value
+      - name: customers_with_over_200_orders
+        description: count of customers whose total number of orders is greater than 200.
+        label: Customers with Over 200 Orders
+        type: simple
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Metric('total_number_of_orders', group_by=['customer']) }} > 200
+
+
