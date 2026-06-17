@@ -100,6 +100,23 @@ metrics:
       - name: orders_over_20
       - name: distinct_orders
 
+saved_queries:
+  - name: order_metrics
+    query_params:
+      metrics:
+        - large_orders_percentage
+        - revenue
+        - distinct_orders
+        - orders_over_20
+      group_by:
+        - TimeDimension('__order_date', 'day')
+    exports:
+      - name: order_metrics
+        config:
+          export_as: table
+          schema: analytics
+
+
 # entities define business concepts with primary IDs
 # e.g. customers, transactions, campaigns, etc. entity is a business-relevant object
 # types - primary, unique, foreign, natural
