@@ -7,11 +7,108 @@ models:
     agg_time_dimension: order_date
     description: one record per order with the customer, order date, and total successful payment amount
     columns:
+    # entities
       - name: order_id
         description: unique identifier for an order
+        entity: 
+          name: order_id
+          type: primary
       - name: customer_id
         description: unique identifier for the customer who placed the order
+        entity: 
+          name: customer_id
+          type: foreign
+    # dimensions
       - name: order_date
         description: date the order was placed
+        granularity: day
+        dimension: 
+          type: time
       - name: amount
         description: total successful payment amount recorded for the order
+        dimension:
+          type: categorical # will be used for filtering later
+      ## metrics
+    metrics:
+      - name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+
+      - name: distinct_orders
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+      - name: order_value_p99
+        type: simple
+        agg: percentile 
+        expr: amount
+        percentile: .99
+        percentile_type: continuous
+
+      - name: order_value_discrete_p99
+        type: simple
+        agg: percentile 
+        expr: amount
+        percentile: .99
+        percentile_type: discrete
+
+      - name: orders_over_20
+        type: simple
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount')}} >= 20
+        
+## advanced metrics        
+metrics:
+  ## ratio metrics
+  - name: large_orders_percentage
+    type: ratio
+    numerator: orders_over_20
+    denominator: distinct_orders
+
+  - name: average_order_value
+    type: ratio
+    numerator: revenue
+    denominator: distinct_orders
+    label: Ratio Metric of devenue divided by distinct orders
+
+  ## cumulative metrics
+  - name: cumulative_revenue_l30d
+    type: cumulative
+    input_metric: revenue
+    window: 30 days
+
+  - name: cumulative_revenue_alltime
+    type: cumulative
+    input_metric: revenue
+
+  - name: cumulative_revenue_mtd
+    type: cumulative
+    input_metric: revenue
+    grain_to_date: month
+
+##derived metrics
+
+  - name: large_orders_percentage_derived
+    label: derived metric calculating large order percentage
+    type: derived
+    expr: orders_over_20 / distinct_orders
+    input_metrics:
+      - name: orders_over_20
+      - name: distinct_orders
+
+# entities define business concepts with primary IDs
+# e.g. customers, transactions, campaigns, etc. entity is a business-relevant object
+# types - primary, unique, foreign, natural
+# time dimensions require time granularity config, other dims just type and name
+# metrics can be simple or advanced
+## simple metrics at model-level in config, advanced are top-level configs
+## metric types
+### simple, ratio, cumulative, conversion, derived
+## simple - sum, avg, min, max, count, etc.
+### configs availble for these metric types - expr, percentile
+
+# advanced metric types - ratio, cumulative, derived, conversion
