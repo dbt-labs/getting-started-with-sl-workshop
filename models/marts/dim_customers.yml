@@ -4,7 +4,7 @@ models:
   - name: dim_customers
     semantic_model:
       enabled: true
-    agg_time_dimension: first_order_date
+    agg_time_dimension: most_recent_order_date
     description: one row per customer with core profile details and customer order history.
     columns:
       - name: customer_id
@@ -56,6 +56,20 @@ models:
         filter: |
           {{ Dimension('customer__number_of_orders') }} > 0
 
+      - name: customers_with_lifetime_value_at_or_below_100
+        description: count of customers with lifetime value less than or equal to 100.
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+        filter: |
+          {{ Dimension('customer__lifetime_value') }} <= 100
+
+      - name: total_customer_orders
+        description: total number of orders across all customers.
+        type: simple
+        agg: sum
+        expr: number_of_orders
+
       - name: total_customer_lifetime_value
         description: total lifetime revenue across all customers.
         type: simple
@@ -67,3 +81,32 @@ models:
         type: simple
         agg: average
         expr: lifetime_value
+
+metrics:
+  - name: average_orders_per_ordering_customer
+    description: average number of orders per customer who has placed at least one order.
+    type: ratio
+    numerator: total_customer_orders
+    denominator: customers_with_orders
+
+  - name: customers_without_orders
+    description: count of customers who have not placed any orders.
+    type: derived
+    expr: total_customers - customers_with_orders
+    input_metrics:
+      - name: total_customers
+      - name: customers_with_orders
+
+  - name: cumulative_customers_with_orders
+    description: running total of customers who have placed their first order over time.
+    type: cumulative
+    input_metric: customers_with_orders
+
+  - name: customers_with_lifetime_value_over_100
+    description: count of customers with lifetime value greater than 100.
+    type: derived
+    expr: total_customers - customers_with_lifetime_value_at_or_below_100
+    input_metrics:
+      - name: total_customers
+      - name: customers_with_lifetime_value_at_or_below_100
+
