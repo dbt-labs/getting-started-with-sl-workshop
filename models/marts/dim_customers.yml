@@ -1,0 +1,128 @@
+version: 2
+
+models:
+  - name: dim_customers
+    semantic_model:
+      enabled: true
+    agg_time_dimension: first_order_date
+    description: one row per customer with customer identity and order history summary.
+    columns:
+      - name: customer_id
+        description: unique identifier for a customer.
+        entity:
+          name: customer
+          type: primary
+        data_tests:
+          - not_null
+          - unique
+
+      - name: first_name
+        description: customer's first name.
+        dimension:
+          type: categorical
+
+      - name: last_name
+        description: customer's last name.
+        dimension:
+          type: categorical
+
+      - name: first_order_date
+        description: date of the customer's first order.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: most_recent_order_date
+        description: date of the customer's most recent order.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: number_of_orders
+        description: total number of orders placed by the customer.
+
+      - name: lifetime_value
+        description: total value of all orders placed by the customer.
+
+    metrics:
+      - name: customers
+        description: total number of customers.
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: total_customer_orders
+        description: total number of orders across customers.
+        type: simple
+        agg: sum
+        expr: number_of_orders
+
+      - name: total_customer_lifetime_value
+        description: total lifetime value across customers.
+        type: simple
+        agg: sum
+        expr: lifetime_value
+
+      - name: avg_orders_per_customer
+        description: average number of orders per customer.
+        type: simple
+        agg: average
+        expr: number_of_orders
+
+      - name: avg_customer_lifetime_value
+        description: average lifetime value per customer.
+        type: simple
+        agg: average
+        expr: lifetime_value
+
+      - name: customer_order_frequency
+        description: average number of orders per customer.
+        type: ratio
+        numerator: total_customer_orders
+        denominator: customers
+
+      - name: customer_value_per_order
+        description: average lifetime value generated per order.
+        type: ratio
+        numerator: total_customer_lifetime_value
+        denominator: total_customer_orders
+
+      - name: cumulative_customers
+        description: cumulative count of customers over all time.
+        type: cumulative
+        input_metric: customers
+        period_agg: last
+
+      - name: cumulative_customers_mtd
+        description: month-to-date cumulative count of customers.
+        type: cumulative
+        input_metric: customers
+        grain_to_date: month
+        period_agg: last
+
+      - name: cumulative_customer_lifetime_value
+        description: cumulative customer lifetime value over all time.
+        type: cumulative
+        input_metric: total_customer_lifetime_value
+        period_agg: last
+
+      - name: customer_growth_mom
+        description: month-over-month growth rate in customers.
+        type: derived
+        expr: (customers - customers_prev_month) / customers_prev_month
+        input_metrics:
+          - name: customers
+          - name: customers
+            alias: customers_prev_month
+            offset_window: 1 month
+
+      - name: customer_lifetime_value_growth_mom
+        description: month-over-month growth rate in customer lifetime value.
+        type: derived
+        expr: (total_customer_lifetime_value - total_customer_lifetime_value_prev_month) / total_customer_lifetime_value_prev_month
+        input_metrics:
+          - name: total_customer_lifetime_value
+          - name: total_customer_lifetime_value
+            alias: total_customer_lifetime_value_prev_month
+            offset_window: 1 month
+
