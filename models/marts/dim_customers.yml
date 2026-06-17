@@ -1,0 +1,100 @@
+version: 2
+
+models:
+  - name: dim_customers
+    semantic_model:
+      enabled: true
+    agg_time_dimension: most_recent_order_date
+    description: one record per customer with customer profile details and order history summary
+    columns:
+      - name: customer_id
+        description: unique identifier for the customer
+        entity:
+          type: primary
+          name: customer_id
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+
+      - name: first_name
+        description: customer's first name
+        dimension:
+          type: categorical
+      - name: last_name
+        description: customer's last name
+        dimension:
+          type: categorical
+      - name: first_order_date
+        description: date of the customer's first order
+        granularity: day
+        dimension:
+          type: time
+      - name: most_recent_order_date
+        description: date of the customer's most recent order
+        granularity: day
+        dimension:
+          type: time
+      - name: number_of_orders
+        description: total number of orders placed by the customer
+        dimension:
+          type: categorical
+        data_tests:
+          - not_null
+      - name: lifetime_value
+        description: total revenue generated from the customer's orders
+        dimension:
+          type: categorical
+
+    metrics:
+      - name: customers
+        description: Count of customers.
+        label: Customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: customers_with_orders
+        description: Count of customers who have placed at least one order.
+        label: Customers with Orders
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+        filter: |
+          {{ Dimension('customer_id__number_of_orders') }} > 0
+
+      - name: total_customer_lifetime_value
+        description: Sum of customer lifetime value across customers.
+        label: Total Customer Lifetime Value
+        type: simple
+        agg: sum
+        expr: lifetime_value
+
+      - name: average_customer_lifetime_value
+        description: Average customer lifetime value.
+        label: Average Customer Lifetime Value
+        type: simple
+        agg: average
+        expr: lifetime_value
+
+      - name: total_customer_orders
+        description: Sum of customer order counts across customers.
+        label: Total Customer Orders
+        type: simple
+        agg: sum
+        expr: number_of_orders
+
+      - name: customers_with_lifetime_value_over_100
+        description: Count of customers whose lifetime value is greater than 100.
+        label: Customers with Lifetime Value Over 100
+        type: derived
+        expr: high_value_customers
+        input_metrics:
+          - name: customers
+            alias: high_value_customers
+            filter: |
+              {{ Dimension('customer_id__lifetime_value') }} > 100
+
