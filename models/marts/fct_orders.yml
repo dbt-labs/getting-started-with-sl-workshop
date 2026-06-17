@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+    description: order-level fact table for customer purchases and collected payment amounts.
+    columns:
+      - name: order_id
+        description: unique identifier for an order.
+        entity:
+          type: primary
+          name: order_id
+      - name: customer_id
+        description: unique identifier for the customer who placed the order.
+        entity:
+          type: foreign
+          name: customer_id
+      - name: order_date
+        description: date the order was placed.
+      - name: amount
+        description: total amount successfully collected for the order.
+
+    metrics:
+      - name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+
