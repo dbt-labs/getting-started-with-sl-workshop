@@ -1,0 +1,101 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+    description: one row per order with the customer, order date, and order amount.
+    columns:
+      - name: order_id
+        description: unique identifier for the order.
+        entity: # Entities
+          type: primary
+          name: order_id
+      - name: customer_id
+        description: unique identifier for the customer who placed the order.
+        entity:
+          name: customer
+          type: foreign
+      - name: order_date
+        description: date the order was placed.
+        granularity: day
+        dimension: # Dimensions
+          type: time
+      - name: amount ## Used for filtering later
+        description: total amount successfully paid for the order.
+        dimension:
+          type: categorical
+    metrics:
+    ## ratio metrics
+    - name: revenue
+      type: simple
+      agg: sum
+      expr: amount
+
+    - name: avg_revenue
+      label: Simple metric to average anount
+      type: simple
+      agg: average
+      expr: amount
+
+    - name: distinct_customers
+      type: simple
+      agg: count_distinct
+      expr: customer_id
+
+    - name: distinct_orders
+      type: simple
+      agg: count_distinct
+      expr: order_id
+
+    - name: order_value_discrete_p99
+      type: simple
+      agg: percentile
+      expr: amount
+      percentile: 0.99
+      percentile_type: discrete
+
+    - name: orders_over_twenty
+      type: simple
+      agg: sum
+      expr: 1
+      filter: |
+          {{ Dimension('order_id__amount') }} >= 20
+## Advanced metrics
+metrics:
+# ratio metrics
+  - name: large_orders_percentage
+    type: ratio
+    numerator: orders_over_twenty
+    denominator: distinct_orders
+  
+  - name: average_order_value
+    label: Ratio metric of revenue divided by distinct_orders
+    type: ratio
+    numerator: revenue
+    denominator: distinct_orders
+  
+  ## Cumulative metrics
+  - name: cumulative_revenue_l30d
+    type: cumulative
+    input_metric: revenue
+    window: 30 days
+
+  - name: cumulative_revenue_mtd
+    type: cumulative
+    input_metric: revenue
+    grain_to_date: month
+
+  - name: cumulative_revenue_all_time
+    type: cumulative
+    input_metric: revenue
+
+    ## derived metrics
+
+  - name: large_orders_percentage_derived
+    type: derived
+    expr: orders_over_twenty / distinct_orders
+    input_metrics:
+      - name: orders_over_twenty
+      - name: distinct_orders
