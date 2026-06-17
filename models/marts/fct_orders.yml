@@ -1,0 +1,99 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: order-level fact table with one row per order and the total successful payment amount collected for that order.
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+    columns:
+      - name: order_id
+        description: unique identifier for the order.
+        entity:
+          type: primary
+          name: order_id
+      - name: customer_id
+        description: unique identifier for the customer who placed the order.
+        entity:
+          name: customer_id
+          type: foreign
+      - name: order_date
+        description: date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+      - name: amount
+        description: total successful payment amount collected for the order in dollars.
+        dimension:
+          type: categorical
+    metrics:
+      - name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+
+      - name: avg_order_value
+        type: simple
+        agg: average
+        expr: amount
+
+      - name: distinct_customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: order_value_99
+        type: simple
+        agg: percentile
+        expr: amount
+        percentile: 0.99
+        percentile_type: continuous
+
+      - name: order_value_991
+        type: simple
+        agg: percentile
+        expr: amount
+        percentile: 0.99
+        percentile_type: discrete
+
+      - name: distinct_orders
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+      - name: orders_over_20
+        type: simple
+        label: Large orders
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount') }} >= 20
+
+metrics:
+  - name: large_orders_percentage
+    type: ratio
+    numerator: orders_over_20
+    denominator: distinct_orders
+
+  - name: average_order_value
+    label: ratio metric of revenue by distinct orders
+    type: ratio
+    numerator: revenue
+    denominator: distinct_orders
+
+  - name: cumrev30d
+    label: Revenue trailing 30 days
+    description: Trailing 30 day cumulative revenue.
+    type: cumulative
+    input_metric:
+      name: revenue
+    window: 30 days
+    period_agg: first
+
+  - name: cumrev3rev
+    label: Cumulative revenue all time
+    description: All-time cumulative revenue.
+    type: cumulative
+    input_metric:
+      name: revenue
+    period_agg: first
