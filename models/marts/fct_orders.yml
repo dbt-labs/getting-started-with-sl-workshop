@@ -50,6 +50,7 @@ models:
         expr: amount
 
       - name: avg_revenue
+        label: Simple metric of average amount
         type: simple
         agg: average
         expr: amount
@@ -85,9 +86,27 @@ models:
         filter: |
           {{ Dimension('order_id__amount') }} >= 20
 
-  # Advanced metrics
-  metrics:
-    - name: large_orders_percentage
-      type: ratio
-      numerator: orders_over_twenty
-      denominator: distinct_orders
+# Advanced metrics
+metrics:
+  ## ratio metrics
+  - name: large_orders_percentage
+    type: ratio
+    numerator: orders_over_twenty
+    denominator: distinct_orders
+
+  - name: average_order_value
+    label: Ratio metric of revenue divided by distinct orders
+    type: ratio
+    numerator: revenue
+    denominator: distinct_orders
+
+  ## cumulative metrics
+  - name: cumulative_revenue_l30d
+    type: cumulative
+    input_metric: revenue
+    window: 30d
+  
+  - name: cumulative_revenue_mtd
+    type: cumulative
+    input_metric: revenue
+    grain_to_date: month
