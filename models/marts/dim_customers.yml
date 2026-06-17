@@ -1,0 +1,57 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: customer dimension with one row per customer and summary order history.
+    semantic_model:
+      enabled: true
+      name: customers
+    agg_time_dimension: most_recent_order_date
+    columns:
+      - name: customer_id
+        description: unique identifier for a customer.
+        entity:
+          name: customer_id
+          type: primary
+      - name: first_name
+        description: customer's first name.
+        dimension:
+          name: customer_name
+          type: categorical
+      - name: first_order_date
+        description: date of the customer's first order.
+        granularity: day
+        dimension:
+          type: time
+      - name: most_recent_order_date
+        description: date of the customer's most recent order.
+        granularity: day
+        dimension:
+          type: time
+      - name: number_of_orders
+        description: total number of orders placed by the customer.
+        dimension:
+          type: categorical
+      - name: lifetime_value
+        description: total successful payment amount from all customer orders in dollars.
+        dimension:
+          type: categorical
+    metrics:
+      - name: ordered_customer_count
+        label: Ordered customers
+        description: unique count of customers placing orders.
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+      - name: count_lifetime_orders
+        description: total count of orders per customer.
+        type: simple
+        label: Lifetime orders
+        agg: sum
+        expr: number_of_orders
+      - name: lifetime_spend
+        description: gross customer lifetime spend inclusive of taxes.
+        type: simple
+        label: Lifetime spend
+        agg: sum
+        expr: lifetime_value
