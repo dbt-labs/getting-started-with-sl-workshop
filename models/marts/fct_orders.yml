@@ -26,6 +26,10 @@ models:
           name: customer
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_id
 
       # Dimensions
       - name: order_date
@@ -124,4 +128,3 @@ metrics:
     input_metrics:
       - name: orders_over_twenty
       - name: distinct_orders
- 
