@@ -67,15 +67,16 @@ models:
         label: Order value P99 Discrete
         agg: percentile
         expr: amount
-        percentile: 99.0
+        percentile: 0.99
         percentile_type: discrete
       - name: order_value_continuous_p99
         type: simple
         label: Order value P99 Continuous
         agg: percentile
         expr: amount
-        percentile: 99.0
+        percentile: 0.99
         percentile_type: continuous
+
       - name: orders_over_20
         description: Count of orders with order total over 20
         type: simple
