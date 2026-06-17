@@ -1,0 +1,87 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: orders fact table with one row per order and the corresponding payment amount.
+    semantic_model: 
+      enabled: true
+    agg_time_dimension: order_date
+    columns:
+      - name: order_id
+        description: unique identifier for an order.
+        entity: 
+          name: orders
+          type: primary
+      - name: customer_id
+        description: unique identifier for the customer who placed the order.
+        entity: 
+          name: customer
+          type: foreign
+      - name: order_date
+        description: date the order was placed.
+        granularity: day
+        dimension: 
+          type: time
+      - name: amount ## use for filter later
+        description: total successful payment amount recorded for the order.
+        dimension: 
+          type: categorical
+    # Metrics
+    metrics:
+      - hidden: false
+        name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+      
+      - name: avg_order_value
+        type: simple
+        agg: average
+        expr: amount
+      
+      - name: distinct_customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: distinct_orders
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+      - name: order_value_p99
+        type: simple
+        agg: percentile
+        expr: amount
+        percentile: 0.99
+        percentile_type: continuous
+
+      - name: order_discrete_p99
+        type: simple
+        agg: percentile
+        expr: amount
+        percentile: 0.99
+        percentile_type: discrete
+
+      - name: orders_over_twenty
+        type: simple
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('orders__amount') }} >= 20
+
+# advenced metrics
+metrics:
+
+# ratio
+  - hidden: false
+    name: large_orders_pct
+    type: ratio
+    numerator: orders_over_twenty
+    denominator: distinct_orders
+
+  - name: avg_order_value_adv
+    label: advanced_metric
+    type: ratio
+    numerator: revenue
+    denominator: distinct_orders
