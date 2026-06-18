@@ -1,0 +1,84 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: Customer dimension with one row per customer, including basic customer attributes and lifetime order summary metrics derived from `fct_orders`.
+    semantic_model:
+      enabled: true
+    agg_time_dimension: first_order_date
+    metrics:
+      - name: customers
+        description: Count of customers in the customer dimension.
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: customers_with_any_orders
+        description: Count of customers who have placed at least one order.
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+        filter: |
+          {{ Dimension('customer__number_of_orders') }} > 0
+
+
+      - name: total_customer_lifetime_value
+        description: Sum of lifetime value across all customers.
+        type: simple
+        agg: sum
+        expr: lifetime_value
+
+      - name: avg_customer_lifetime_value
+        description: Average lifetime value per customer.
+        type: simple
+        agg: average
+        expr: lifetime_value
+
+      - name: avg_customer_orders
+        description: Average number of orders per customer.
+        type: simple
+        agg: average
+        expr: number_of_orders
+    columns:
+      - name: customer_id
+        description: Primary key for the customer.
+        entity:
+          name: customer
+          type: primary
+        data_tests:
+          - not_null
+          - unique
+
+      - name: first_name
+        description: Customer's first name from the source customer record.
+        dimension:
+          type: categorical
+
+      - name: last_name
+        description: Customer's last name from the source customer record.
+        dimension:
+          type: categorical
+
+      - name: first_order_date
+        description: Date of the customer's first order. Null when the customer has not placed an order.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: most_recent_order_date
+        description: Date of the customer's most recent order. Null when the customer has not placed an order.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: number_of_orders
+        description: Total number of orders placed by the customer.
+        dimension:
+          type: categorical
+
+      - name: lifetime_value
+        description: Total order amount across all orders placed by the customer.
+        dimension:
+          type: categorical
+
+
