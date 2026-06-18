@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: Customer dimension with one row per customer, including order history rollups from `fct_orders`.
+    columns:
+      - name: customer_id
+        description: Primary key for the customer.
+
+      - name: first_name
+        description: Customer first name.
+
+      - name: last_name
+        description: Customer last name.
+
+      - name: first_order_date
+        description: Date of the customer's first order.
+
+      - name: most_recent_order_date
+        description: Date of the customer's most recent order.
+
+      - name: number_of_orders
+        description: Total number of orders placed by the customer.
+
+      - name: lifetime_value
+        description: Total revenue collected from the customer across all orders.
