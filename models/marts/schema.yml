@@ -1,0 +1,232 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model: 
+      enabled: true
+    agg_time_dimension: order_date
+    description: |
+      Order-level fact model with one row per order.
+
+      This model joins staged orders to successful payment records and exposes the core measures
+      used for order reporting, including the paid order amount.
+    columns:
+      #entities
+      - name: order_id
+        description: Primary key for the order.
+        entity:
+          type: primary
+          name: order_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: Unique identifier for the customer who placed the order.
+        entity:
+          name: customer
+          type: foreign
+        data_tests:
+          - not_null
+      #dimensions
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+        data_tests:
+          - not_null
+
+      - name: amount # user for filtering
+        description: Total successful payment amount captured for the order. Defaults to 0 when no successful payment exists.
+        dimension:
+          type: categorical
+    # Metrics
+    metrics:
+      - name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+      
+      - name: unique_orders
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+      - name: avg_order_value
+        type: simple
+        agg: average
+        expr: amount
+
+      - name: unique_customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: order_value_p99
+        type: simple
+        agg: percentile
+        expr: amount
+        percentile: 0.99
+        percentile_type: continuous
+
+      - name: order_value_p99_discrete
+        type: simple
+        agg: percentile
+        expr: amount
+        percentile: 0.99
+        percentile_type: discrete
+
+      - name: orders_over_twenty
+        type: simple
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount') }} >= 20
+
+  - name: dim_customers
+    semantic_model:
+      enabled: true
+    agg_time_dimension: most_recent_order_date
+    description: >
+      Customer dimension with one row per customer and summary order behavior rolled up
+      from `fct_orders`. It exposes customer identity fields alongside first and most
+      recent order dates, total order count, and lifetime value.
+    columns:
+      - name: customer_id
+        description: Primary key for the customer.
+        entity:
+          type: primary
+          name: customer
+        data_tests:
+          - unique
+          - not_null
+
+      - name: first_name
+        description: Customer's first name from `stg_customers`.
+        dimension:
+          type: categorical
+        data_tests:
+          - not_null
+
+      - name: last_name
+        description: Customer's last name from `stg_customers`.
+        dimension:
+          type: categorical
+        data_tests:
+          - not_null
+
+      - name: first_order_date
+        description: Date of the customer's first recorded order.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: most_recent_order_date
+        description: Date of the customer's most recent recorded order.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: number_of_orders
+        description: Total number of orders placed by the customer.
+        dimension:
+          type: categorical
+        data_tests:
+          - not_null
+
+      - name: lifetime_value
+        description: Sum of order amount across all orders for the customer.
+        dimension:
+          type: categorical
+
+    metrics:
+      - name: customer_count
+        label: Customer Count
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: repeat_customers
+        label: Repeat Customers
+        type: simple
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('customer__number_of_orders') }} > 1
+
+      - name: total_customer_lifetime_value
+        label: Total Customer Lifetime Value
+        type: simple
+        agg: sum
+        expr: lifetime_value
+
+      - name: average_customer_lifetime_value
+        label: Average Customer Lifetime Value
+        type: simple
+        agg: average
+        expr: lifetime_value
+
+      - name: average_customer_order_count
+        label: Average Customer Order Count
+        type: simple
+        agg: average
+        expr: number_of_orders
+
+## advance metrics
+metrics:
+  ## ratio metrics
+  - name: large_orders_percentage
+    type: ratio
+    numerator: orders_over_twenty
+    denominator: unique_orders
+
+  - name: average_order_value
+    type: ratio
+    numerator: revenue
+    denominator: unique_orders
+
+  - name: repeat_customer_rate
+    type: ratio
+    numerator: repeat_customers
+    denominator: customer_count
+
+  ## Cumulative
+  - name: cumulative_revenue
+    type: cumulative
+    input_metric: revenue
+    window: 30 days
+
+  - name: cumulative_revenue_grain_to_date
+    type: cumulative
+    input_metric: revenue
+    grain_to_date: month
+
+  - name: cumulative_revenue_all_time
+    type: cumulative
+    input_metric: revenue
+
+  # - name: pct_of_orders_that_are_large
+  #       label: Percent of orders that are large
+  #       description: Percent of orders that are large
+  #       type: derived
+  #       expr: large_orders / order_count
+  #       input_metrics:
+  #         - name: large_orders
+  #         - name: order_count
+  - name: pct_of_orders_that_are_large
+    type: derived
+    label: derived metric calculating large orger percentage
+    expr: orders_over_twenty / unique_orders
+    input_metrics:
+      - name: orders_over_twenty
+      - name: unique_orders
+  - name: customers_with_lifetime_value_over_100
+    type: derived
+    label: Customers with Lifetime Value Over 100
+    expr: high_value_customers
+    input_metrics:
+      - name: customer_count
+        alias: high_value_customers
+        filter: |
+          {{ Dimension('customer__lifetime_value') }} > 100
