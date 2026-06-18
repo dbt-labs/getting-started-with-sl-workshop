@@ -1,0 +1,41 @@
+models:
+  - name: fct_orders
+    description: Order-level fact model with one row per order and associated payment amount.
+    semantic_model:
+      enabled: true
+      name: orders
+    agg_time_dimension: order_date
+    columns:
+      - name: order_id
+        description: Primary key for an order.
+        entity:
+          name: order_id
+          type: primary
+
+      - name: customer_id
+        description: Customer associated with the order.
+        entity:
+          name: customer_id
+          type: foreign
+
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: amount
+        description: Total successful payment amount captured for the order.
+
+    metrics:
+      - name: order_count
+        description: Count of orders.
+        type: simple
+        agg: count
+        expr: 1
+
+      - name: order_revenue
+        description: Total revenue from successful order payments.
+        type: simple
+        agg: sum
+        expr: amount
