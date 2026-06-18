@@ -1,0 +1,117 @@
+models:
+  - name: fct_orders
+    semantic_model:
+      enabled: true
+      name: orders
+      
+    agg_time_dimension: order_date
+    
+    columns:
+      # Entities
+      - name: order_id
+        entity:
+          type: primary
+          name: order_id
+      - name: customer_id
+        entity:
+          name: customer
+          type: foreign
+      # Dimensions      
+      - name: order_date
+        granularity: day
+        dimension:
+          type: time
+      - name: amount
+        dimension:
+          type: categorical
+    
+    # Simple metrics
+    metrics:
+      - name: order_total
+        description: The total amount for each order including taxes
+        type: simple
+        label: Order total
+        agg: sum
+        expr: amount
+      - name: order_count
+        type: simple
+        label: Order count
+        agg: sum
+        expr: 1
+      - name: customers_with_orders
+        description: Distinct count of customers placing orders
+        type: simple
+        label: Customers with orders
+        agg: count_distinct
+        expr: customer_id
+      - name: order_value_p99
+        type: simple
+        label: Order value P99
+        agg: percentile
+        expr: amount
+        percentile: 99.0
+        percentile_type: discrete
+      - name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+      - name: avg_order_value
+        label: Simple Metric of Average Amount
+        type: simple
+        agg: average
+        expr: amount
+      - name: distinct_customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: distinct_orders
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+      - name: orders_over_20
+        description: Count of orders with order total over 20
+        type: simple
+        label: Large orders
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount') }} >= 20
+## Advanced Metrics
+metrics:
+  ## ratio metrics
+  - hidden: false
+    name: large_orders_percentage
+    type: ratio
+    numerator: orders_over_20
+    denominator: distinct_orders
+  - name: average_order_value
+    label: Ratio Metric of revenue divide by order
+    type: ratio
+    numerator: revenue
+    denominator: distinct_orders
+## cumulate metrics
+  - name: cumulative_revenue_l30d
+    type: cumulative
+    input_metric: revenue
+    window: 30 days
+
+## Derived metric
+  - name: pct_of_orders_that_are_large
+    label: Percent of orders that are large
+    description: Percent of orders that are large
+    type: derived
+    expr: orders_over_20 / order_count
+    input_metrics:
+      - name: orders_over_20
+      - name: order_count
+
+
+  - name: large_orer_percentage_derived
+    label: Derived metric calculating large orders percentage
+    type: derived
+    expr: orders_over_20 / distinct_orders
+    input_metrics:
+      - name: orders_over_20
+      - name: distinct_orders
