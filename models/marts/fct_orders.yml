@@ -1,0 +1,96 @@
+models:
+  - name: fct_orders
+    description: Order-level fact table with one row per order and successful payment amount.
+    semantic_model:
+      enabled: true
+      name: orders
+    agg_time_dimension: order_date
+    columns:
+      - name: order_id
+        description: Primary key for each order.
+        entity:
+          name: order_id
+          type: primary
+
+      - name: customer_id
+        description: Customer associated with the order.
+        entity:
+          name: customer
+          type: foreign
+
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          name: order_date
+          type: time
+
+      - name: amount
+        description: Total successful payment amount captured for the order.
+
+    metrics:
+      - name: order_count
+        description: Total number of orders.
+        type: simple
+        agg: count
+        expr: 1
+
+      - name: gross_revenue
+        description: Total successful payment amount across orders.
+        type: simple
+        agg: sum
+        expr: amount
+
+      - name: average_order_value
+        description: Average successful payment amount per order.
+        type: simple
+        agg: average
+        expr: amount
+
+      - name: order_value_p99
+        description: 99th percentile order value.
+        type: simple
+        agg: percentile
+        expr: amount
+        percentile: 99.0
+        percentile_type: discrete
+
+metrics:
+  - name: average_order_value_ratio
+    description: Gross revenue divided by order count.
+    type: ratio
+    label: Average order value ratio
+    numerator: gross_revenue
+    denominator: order_count
+
+  - name: gross_revenue_mtd
+    description: Month-to-date gross revenue.
+    type: cumulative
+    label: Gross revenue MTD
+    input_metric: gross_revenue
+    grain_to_date: month
+
+  - name: order_count_mtd
+    description: Month-to-date order count.
+    type: cumulative
+    label: Order count MTD
+    input_metric: order_count
+    grain_to_date: month
+
+  - name: gross_revenue_rolling_7d
+    description: Rolling 7 day gross revenue.
+    type: cumulative
+    label: Gross revenue rolling 7d
+    input_metric: gross_revenue
+    window: 7 days
+
+  - name: order_value_p99_gap
+    description: Difference between p99 order value and average order value.
+    type: derived
+    label: Order value p99 gap
+    expr: p99 - aov
+    input_metrics:
+      - name: order_value_p99
+        alias: p99
+      - name: average_order_value
+        alias: aov
