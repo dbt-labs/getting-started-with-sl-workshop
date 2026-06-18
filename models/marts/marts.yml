@@ -1,0 +1,71 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: One record per order with the customer, order date, and total successful payment amount.
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+    columns:
+      - name: order_id
+        description: Primary key for the order.
+        entity:
+          type: primary
+          name: orders
+
+      - name: customer_id
+        description: Unique identifier for the customer who placed the order.
+        entity:
+          type: foreign
+          name: customer
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+          name: order_date
+      - name: amount
+        description: Total amount successfully paid for the order. Defaults to 0 when no successful payments exist.
+        dimension: 
+          type: categorical
+    metrics:
+      - name: order_count
+        description: Total number of orders.
+        type: simple
+        label: Order Count
+        agg: count
+        expr: 1
+      - name: total_amount
+        description: Sum of successful payment amount across orders.
+        type: simple
+        label: Total Amount
+        agg: sum
+        expr: amount
+      - name: average_order_amount
+        description: Average successful payment amount per order.
+        type: simple
+        label: Average Order Amount
+        agg: average
+        expr: amount
+      - name: median_order_amount
+        description: Median successful payment amount per order.
+        type: simple
+        label: Median Order Amount
+        agg: median
+        expr: amount
+      - name: average_order_amount
+        description: Average successful payment amount per order.
+        type: simple
+        label: Average Order Amount
+        agg: percentile
+        percentile: 0.99
+        percentile_type: discrete
+        expr: amount
+      - name: large_orders
+        description: "Count of orders with order total over 20."
+        type: simple
+        agg: sum
+        label: "Large Orders"
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__order_total') }} >= 20
