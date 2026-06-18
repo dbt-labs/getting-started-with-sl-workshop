@@ -1,0 +1,134 @@
+models:
+  - name: time_spine_daily
+    description: A time spine with one row per day, ranging from 5 years in the past to 30 days into the future.
+    time_spine:
+      standard_granularity_column: date_day  # The base column used for time joins
+    columns:
+      - name: date_day
+        description: The base date column for daily granularity
+        granularity: day
+  - name: dim_date
+    description: An existing date dimension model used as a time spine.
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        granularity: day
+      - name: day_of_week
+        granularity: day
+      - name: full_date
+        granularity: day
+  - name: time_spine_yearly
+    description: time spine one row per house
+    time_spine:
+      standard_granularity_column: date_year
+    columns:
+      - name: date_year
+        granularity: year
+  - name: fiscal_calendar
+    description: A custom fiscal calendar with fiscal year and fiscal week granularities.
+    time_spine:
+      standard_granularity_column: date_day
+      custom_granularities:
+        - name: fiscal_year
+          column_name: fiscal_year
+        - name: fiscal_week
+          column_name: fiscal_week
+    columns:
+      - name: date_day
+        granularity: day
+      - name: fiscal_year
+        description: "Custom fiscal year starting in October"
+      - name: fiscal_week
+  - name: dim_customers
+    description: one record per customer with order history and lifetime value
+    semantic_model:
+      enabled: true
+    agg_time_dimension: first_order_date
+    #data_tests:
+     # - dbt_utils.expression_is_true:
+      #    expression: "number_of_orders >= 0"
+      #- dbt_utils.expression_is_true:
+       #   expression: "most_recent_order_date >= first_order_date or first_order_date is null"
+    columns:
+      - name: customer_id
+        description: unique identifier for the customer
+        entity:
+          type: primary
+          name: customer
+        data_tests:
+          - not_null
+          - unique
+      - name: first_name
+        description: customer's first name
+        dimension:
+          type: categorical
+      - name: last_name
+        description: customer's last name
+        dimension:
+          type: categorical
+      - name: first_order_date
+        description: date of the customer's first order
+        dimension:
+          type: time
+        granularity: day
+      - name: most_recent_order_date
+        description: date of the customer's most recent order
+        dimension:
+          type: time
+        granularity: day
+      - name: number_of_orders
+        description: total number of orders placed by the customer
+        dimension:
+          type: categorical
+        data_tests:
+          - not_null
+      - name: lifetime_value
+        description: total revenue attributed to the customer across all orders
+        dimension:
+          type: categorical
+    metrics:
+      - name: customer_count
+        description: Distinct count of customers.
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: customers_with_customer_orders
+        description: Count of customers who have placed at least one order.
+        type: simple
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('customer__number_of_orders') }} > 0
+
+
+      - name: total_customer_lifetime_value
+        description: Sum of customer lifetime value across customers.
+        type: simple
+        agg: sum
+        expr: lifetime_value
+
+      - name: avg_customer_lifetime_value
+        description: Average customer lifetime value.
+        type: simple
+        agg: average
+        expr: lifetime_value
+
+      - name: total_customer_orders
+        description: Sum of all orders attributed to customers.
+        type: simple
+        agg: sum
+        expr: number_of_orders
+
+      - name: count_lifetime_orders
+        description: Total count of orders per customer.
+        agg: sum
+        expr: number_of_orders
+      - name: lifetime_spend_pretax
+        description: Customer lifetime spend before taxes.
+        agg: sum
+      - name: lifetime_spend
+        agg: sum
+        description: Gross customer lifetime spend inclusive of taxes.
+        expr: lifetime_value
