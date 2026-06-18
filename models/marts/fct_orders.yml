@@ -1,0 +1,95 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: One row per order with the customer who placed it, the order date, and the total successful payment amount captured for that order. This model is the clean fact table for order-level revenue analysis and defaults unpaid or failed-payment orders to `0`.
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+    columns:
+      - name: order_id
+        description: Primary key for the order, inherited from `stg_orders`.
+        entity:
+          type: primary
+          name: orders
+
+      - name: customer_id
+        description: Identifier for the customer who placed the order.
+        entity:
+          type: foreign
+          name: customer
+
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: amount
+        description: Sum of successful payment amounts for the order in dollars. Orders with no successful payments return `0`.
+        dimension:
+          type: categorical
+          
+    metrics:
+      - name: order_count
+        description: Count of orders in `fct_orders`.
+        type: simple
+        label: Order Count
+        agg: count
+        expr: 1
+
+      - name: total_order_amount
+        description: Total successful payment amount across orders in dollars.
+        type: simple
+        label: Total Order Amount
+        agg: sum
+        expr: amount
+
+      - name: average_order_amount
+        description: Average successful payment amount per order in dollars.
+        type: simple
+        label: Average Order Amount
+        agg: average
+        expr: amount
+
+      - name: distinct_customers
+        description: Count of distinct customers who placed orders.
+        type: simple
+        label: Distinct Customers
+        agg: count_distinct
+        expr: customer_id
+
+      - name: revenue_per_customer
+        description: Average order revenue per distinct customer.
+        type: ratio
+        label: Revenue per Customer
+        numerator: total_order_amount
+        denominator: distinct_customers
+
+      - name: orders_per_customer
+        description: Average number of orders per distinct customer.
+        type: ratio
+        label: Orders per Customer
+        numerator: order_count
+        denominator: distinct_customers
+
+      - name: cumulative_total_order_amount
+        description: Running total of successful payment amount over time.
+        type: cumulative
+        label: Cumulative Total Order Amount
+        input_metric: total_order_amount
+
+      - name: cumulative_order_count
+        description: Running count of orders over time.
+        type: cumulative
+        label: Cumulative Order Count
+        input_metric: order_count
+      - name: amount_p95
+        description: 95th percentile of order payment amount in dollars.
+        type: simple
+        label: Order Amount P95
+        agg: percentile
+        expr: amount
+        percentile: 95.0
+        percentile_type: discrete
+
