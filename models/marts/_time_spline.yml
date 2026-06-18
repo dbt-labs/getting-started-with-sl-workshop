@@ -1,6 +1,7 @@
-models: 
+version: 2
 
-# Daily time spine
+models:
+  # Daily time spine
   - name: metricflow_time_spine
     time_spine:
       standard_granularity_column: date_day # column for the standard grain of your table
@@ -17,9 +18,19 @@ models:
     columns:
       - name: order_id
         description: Primary key for the order.
+        data_tests:
+          - unique
+          - not_null
       - name: customer_id
         description: Foreign key to the customer who placed the order.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: customer_id
       - name: order_date
         description: Date the order was placed.
+        data_tests:
+          - not_null
       - name: amount
         description: Total amount from successful payments associated with the order.
