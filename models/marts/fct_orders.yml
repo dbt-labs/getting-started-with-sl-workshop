@@ -1,0 +1,58 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: >
+      One row per order with the customer who placed it, the order date, and the
+      total successful payment amount collected for that order. This model rolls
+      up payment records from Stripe to the order grain so downstream marts can
+      aggregate revenue without rejoining payment transactions.
+    semantic_model:
+      enabled: true
+      name:
+    agg_time_dimension: order_date 
+    columns:
+      - name: order_id
+        description: Primary key for the order.
+        entity:
+          type: primary
+          name: order_id
+
+      - name: customer_id
+        description: Foreign key to the customer who placed the order.
+        entity:
+          name: customer_id
+          type: foreign
+
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time        
+
+      - name: amount
+        description: Total dollar amount from successful payment records associated with the order. Defaults to 0 when an order has no successful payments.
+        dimension:
+          type: categorical
+    ##metrics
+    metrics:
+        - name: revenue
+          type: simple
+          agg: sum
+          expr: amount
+
+        - name: avg_revenue
+          type: simple
+          agg: average
+          expr: amount 
+        
+        - name: large_orders
+          type: simple
+          agg: sum
+          expr: 1
+          filter: | 
+            {{ Dimension('order_id__amount') }} >= 20
+        
+        
+
+
