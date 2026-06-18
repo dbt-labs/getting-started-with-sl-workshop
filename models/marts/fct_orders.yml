@@ -1,0 +1,85 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model: 
+      enabled: true
+    agg_time_dimension: order_date
+
+    description: Fact table with one row per order, including the customer who placed the order, the order date, and the total successful payment amount collected for that order.
+    columns:
+      - name: order_id
+        description: Primary key for the order.
+        entity:
+          type: primary
+          name: order_id
+
+      - name: customer_id
+        description: Foreign key to the customer who placed the order.
+        entity: 
+          type: foreign
+          name: customer_id
+
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: amount
+        description: Total dollar amount of successful payments collected for the order. Defaults to 0 when an order has no successful payments.
+        dimension: 
+          type: categorical
+
+    # Newly added - Simple metrics
+    metrics:
+      # Simple type metrics
+      - name: order_total
+        description: Sum of orders value
+        type: simple
+        label: Order total
+        agg: sum
+        expr: amount
+      - name: order_count
+        description: Number of orders
+        type: simple
+        label: Order count
+        agg: sum
+        expr: 1
+      - name: customers_with_orders
+        description: Distinct count of customers placing orders
+        type: simple
+        label: Customers with orders
+        agg: count_distinct
+        expr: customer_id
+      - name: large_orders
+        description: Count of orders with order total over 20
+        type: simple
+        label: Large orders
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount') }} >= 20
+      # Ratio type metric
+      - name: avg_order_value
+        label: Average order value
+        description: Average value of each order
+        type: ratio
+        numerator: order_total
+        denominator: order_count
+      # Cumulative type metrics
+      - name: cumulative_order_amount_mtd
+        label: Cumulative order amount MTD
+        description: The month to date value of all orders
+        type: cumulative
+        grain_to_date: month
+        input_metric: order_total
+      # Derived metric
+      - name: pct_of_orders_that_are_large
+        label: Percent of orders that are large
+        description: Percent of orders that are large
+        type: derived
+        expr: large_orders / order_count
+        input_metrics:
+          - name: large_orders
+          - name: order_count
