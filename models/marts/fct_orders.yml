@@ -39,3 +39,27 @@ models:
     type: simple
     agg: sum
     expr: amount
+
+  - name: avg_revenue
+    type: simple
+    agg: average
+    expr: amount
+  
+  - name: distinct_customers
+    type: simple
+    agg: count_distinct
+    expr: customer_id
+
+  - name: order_value_p99
+    type: simple
+    agg: percentile
+    expr: amount
+    percentile: 0.66
+    percentile_type: continuous
+
+  - name: order_value_discrete_p99
+    type: simple
+    agg: percentile
+    expr: amount
+    percentile: 0.66
+    percentile_type: discrete
