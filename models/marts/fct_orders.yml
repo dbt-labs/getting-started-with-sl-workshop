@@ -1,0 +1,66 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+    description: "Fact table at the order grain with one row per order, including the customer who placed the order, the order date, and the total successful payment amount collected for that order."
+
+    columns:
+      # entities
+      - name: order_id
+        description: "Unique identifier for the order."
+        entity:
+          type: primary
+          name: order_id
+      - name: customer_id
+        description: "Unique identifier for the customer who placed the order."
+        entity:
+          name: customer
+          type: foreign
+
+      # dimensions
+      - name: order_date
+        description: "Date the order was placed."
+        granularity: day
+        dimension:
+          type: time
+
+      - name: amount # use for filtering later
+        description: "Total amount from successful payments associated with the order; defaults to 0 when no successful payment exists."
+        dimension:
+          type: categorical
+
+    # Newly added - Simple metrics
+    metrics:
+      - name: order_total
+        description: The total amount for each order including taxes
+        type: simple
+        label: Order total
+        agg: sum
+        expr: amount
+      - name: order_count
+        type: simple
+        label: Order count
+        agg: sum
+        expr: 1
+      - name: customers_with_orders
+        description: Distinct count of customers placing orders
+        type: simple
+        label: Customers with orders
+        agg: count_distinct
+        expr: customer_id
+      - name: order_value_p99
+        type: simple
+        label: Order value P99
+        agg: percentile
+        expr: amount
+        percentile: 99.0
+        percentile_type: discrete
+      - name: large_orders
+        type: simple 
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount') }} >= 20
