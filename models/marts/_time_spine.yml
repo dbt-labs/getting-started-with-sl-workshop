@@ -2,7 +2,7 @@ models:
 # Daily time spine
   - name: time_spine_daily
     time_spine:
-      standard_granularity_column: date_day # column for the standard grain of your table
+      standard_granularity_column: order_date # column for the standard grain of your table
     columns:
-      - name: date_day
+      - name: order_date
         granularity: day # set granularity at column-level for standard_granularity_column
