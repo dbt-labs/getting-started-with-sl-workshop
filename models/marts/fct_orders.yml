@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: |
+      Order-level fact model with one row per order.
+
+      This model combines order records with successful payment amounts so downstream
+      reporting can analyze order volume, customer activity, and revenue at the
+      order grain.
+    columns:
+      - name: order_id
+        description: Primary key for the order.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: Customer who placed the order.
+        data_tests:
+          - not_null
+
+      - name: order_date
+        description: Date the order was placed.
+        data_tests:
+          - not_null
+
+      - name: amount
+        description: Total successful payment amount associated with the order. Defaults to 0 when no successful payment exists.
