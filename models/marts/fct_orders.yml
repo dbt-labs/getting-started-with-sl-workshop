@@ -1,0 +1,112 @@
+models:
+  - name: fct_orders
+    description: Fact table at the order grain with one row per order and the successfully captured payment amount for that order.
+    semantic_model:
+      enabled: true
+
+    agg_time_dimension: order_date
+
+    columns:
+      # Entities
+      - name: order_id
+        description: Primary key for the order.
+        data_tests:
+          - not_null
+          - unique
+        entity:
+          type: primary
+          name: order
+
+      - name: customer_id
+        description: Foreign key to the customer who placed the order.
+        data_tests:
+          - not_null
+        entity:
+          type: foreign
+          name: customer
+
+      # Dimensions
+      - name: order_date
+        description: Date the order was placed.
+        data_tests:
+          - not_null
+        granularity: day
+        dimension:
+          type: time
+
+      - name: amount # Used for filtering
+        description: Total successful payment amount captured for the order.
+        dimension:
+          type: categorical
+        data_tests:
+          - not_null
+
+    # Simple Metrics      
+    metrics:
+      - name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+
+      - name: average_order_value
+        type: simple
+        agg: average
+        expr: amount
+
+      - name: smallest_order_value
+        type: simple
+        agg: min
+        expr: amount
+
+      - name: order_value_continuous_percentile
+        type: simple
+        agg: percentile
+        percentile: 0.99
+        percentile_type: continuous
+
+      - name: order_value_discrete_percentile
+        type: simple
+        agg: percentile
+        percentile: 0.99
+        percentile_type: discrete
+
+      - name: distinct_orders
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+      - name: large_order_counts
+        description: Count of orders with order total over 20
+        type: simple
+        label: Large orders
+        agg: count_distinct
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount') }} >= 20
+
+# Advanced Metrics
+
+metrics:
+# Ratio metrics
+  - name: large_orders_percentage
+    type: ratio
+    description: "Distinct order id ratio to orders"
+    numerator: large_order_counts
+    denominator: distinct_orders
+
+# Cumulative metrics
+  - name: cumulative_revenue_l30d
+    label: "Cumulative revenue (L30D)"   
+    description: "Trailing 30d revenue total"
+    type: cumulative
+    window: 30 days
+    input_metric: revenue
+
+# Derived metrics
+  - name: large_orders_percentage_derived
+    label: Derived metric calculating large orders percentage
+    type: derived
+    expr: large_order_counts/distinct_orders
+    input_metrics:
+      - name: large_order_counts
+      - name: distinct_orders
