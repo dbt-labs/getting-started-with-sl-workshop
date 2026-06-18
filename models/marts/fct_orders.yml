@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: Fact table with one row per order, including the customer, order date, and total successful payment amount.
+    columns:
+      - name: order_id
+        description: Primary key for the order grain; one row per order.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: Identifier for the customer who placed the order.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: customer_id
+
+      - name: order_date
+        description: Date the order was placed.
+        data_tests:
+          - not_null
+
+      - name: amount
+        description: Sum of successful payment amounts for the order. Defaults to 0 when no successful payment exists.
+        data_tests:
+          - not_null
