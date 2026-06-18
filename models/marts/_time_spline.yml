@@ -1,15 +1,25 @@
-version: 2
+models: 
 
-models:
-  - name: time_spine_daily
-    description: >
-      Daily date spine used as a canonical calendar table for joining facts and
-      dimensions at the day grain. This model contains one row per date and
-      serves as the shared calendar backbone for time-series reporting,
-      gap-filling, and period-based analysis.
+# Daily time spine
+  - name: metricflow_time_spine
     time_spine:
-      standard_granularity_column: date_day
+      standard_granularity_column: date_day # column for the standard grain of your table
     columns:
       - name: date_day
-        description: Calendar date at day grain.
-        granularity: day
+        granularity: day # set granularity at column-level for standard_granularity_column
+
+  - name: fct_orders
+    description: >
+      Fact table with one row per order. Enriches each order with its customer,
+      order date, and the total successful payment amount applied to that order.
+      Use this model for order-level reporting, revenue rollups, and customer
+      purchase analysis.
+    columns:
+      - name: order_id
+        description: Primary key for the order.
+      - name: customer_id
+        description: Foreign key to the customer who placed the order.
+      - name: order_date
+        description: Date the order was placed.
+      - name: amount
+        description: Total amount from successful payments associated with the order.
