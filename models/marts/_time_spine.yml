@@ -1,6 +1,6 @@
 models: 
 # Daily time spine
-  - name: metricflow_time_spine
+  - name: time_spine_daily
     time_spine:
       standard_granularity_column: date_day # column for the standard grain of your table
     columns:

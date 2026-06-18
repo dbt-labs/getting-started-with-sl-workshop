@@ -1,0 +1,91 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: >
+      One row per customer with core customer attributes from `stg_customers` and
+      order lifecycle metrics from `fct_orders`, including first order date, most
+      recent order date, order count, and lifetime value.
+    semantic_model:
+      enabled: true
+      name: dim_customers
+    agg_time_dimension: first_order_date
+    columns:
+      - name: customer_id
+        description: Primary key for the customer.
+        entity:
+          type: primary
+          name: customer_id
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+
+      - name: first_name
+        description: Customer first name from the source customer record.
+        dimension:
+          type: categorical
+          name: first_name
+        data_tests:
+          - not_null
+
+      - name: last_name
+        description: Customer last name from the source customer record.
+        dimension:
+          type: categorical
+          name: last_name
+        data_tests:
+          - not_null
+
+      - name: first_order_date
+        description: Date of the customer's first recorded order.
+        granularity: day
+        dimension:
+          type: time
+          name: first_order_date
+
+      - name: most_recent_order_date
+        description: Date of the customer's most recent recorded order.
+        granularity: day
+        dimension:
+          type: time
+          name: most_recent_order_date
+
+      - name: number_of_orders
+        description: Count of orders placed by the customer. Defaults to 0 for customers with no orders.
+        dimension:
+          type: categorical
+          name: number_of_orders
+
+      - name: lifetime_value
+        description: Total revenue collected across all of the customer's orders.
+        dimension:
+          type: categorical
+          name: lifetime_value
+
+    metrics:
+      - name: customers
+        description: Count of customers.
+        type: simple
+        label: Customers
+        agg: count_distinct
+        expr: customer_id
+
+      - name: customer_lifetime_value
+        description: Total lifetime value across customers.
+        type: simple
+        label: Customer lifetime value
+        agg: sum
+        expr: lifetime_value
+        fill_nulls_with: 0
+
+      - name: customer_order_count
+        description: Total number of orders across customers.
+        type: simple
+        label: Customer order count
+        agg: sum
+        expr: number_of_orders
+        fill_nulls_with: 0

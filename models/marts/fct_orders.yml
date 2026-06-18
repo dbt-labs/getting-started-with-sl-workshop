@@ -9,8 +9,8 @@ models:
       aggregate revenue without rejoining payment transactions.
     semantic_model:
       enabled: true
-      name:
-    agg_time_dimension: order_date 
+      name: fct_orders
+    agg_time_dimension: order_date
     columns:
       - name: order_id
         description: Primary key for the order.
@@ -21,38 +21,58 @@ models:
       - name: customer_id
         description: Foreign key to the customer who placed the order.
         entity:
-          name: customer_id
           type: foreign
+          name: customer_id
 
       - name: order_date
         description: Date the order was placed.
         granularity: day
         dimension:
-          type: time        
+          type: time
+          name: order_date
 
       - name: amount
         description: Total dollar amount from successful payment records associated with the order. Defaults to 0 when an order has no successful payments.
         dimension:
           type: categorical
-    ##metrics
+          name: amount
+
     metrics:
-        - name: revenue
-          type: simple
-          agg: sum
-          expr: amount
+      - name: revenue
+        type: simple
+        label: Total revenue
+        agg: sum
+        expr: amount
 
-        - name: avg_revenue
-          type: simple
-          agg: average
-          expr: amount 
-        
-        - name: large_orders
-          type: simple
-          agg: sum
-          expr: 1
-          filter: | 
-            {{ Dimension('order_id__amount') }} >= 20
-        
-        
+      - name: distinct_orders
+        type: simple
+        label: Distinct orders
+        agg: count_distinct
+        expr: order_id
 
+      - name: large_orders
+        type: simple
+        label: Orders with revenue of at least 20
+        agg: count_distinct
+        expr: order_id
+        filter: |
+          {{ Dimension('order_id__amount') }} >= 20
 
+metrics:
+  - name: large_orders_percentage
+    type: ratio
+    label: Share of orders with revenue of at least 20
+    numerator: large_orders
+    denominator: distinct_orders
+
+  - name: average_order_value
+    type: ratio
+    label: Revenue divided by distinct orders
+    numerator: revenue
+    denominator: distinct_orders
+
+  - name: cumulative_revenue_l30d
+    type: cumulative
+    label: Trailing 30 day cumulative revenue
+    input_metric: revenue
+    window: 30 days
