@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+
+    columns:
+      - name: order_id
+        entity:
+          type: primary
+
+      - name: customer_id
+        entity:
+          type: foreign
+
+      - name: order_date
+        granularity: day
+        dimension:
+          type: time
+
+      - name: amount
+        dimension:
+          type: categorical
+
+    metrics:
+      - name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+
+      - name: avg_revenue
+        type: simple
+        agg: average
+        expr: amount
