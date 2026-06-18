@@ -1,0 +1,12 @@
+models:
+  - name: time_spine_daily
+    description: Daily time spine used for consistent date-based joins, filtering, and metric aggregation across the marts layer. The model contains one row per calendar day and is bounded to dates from five years before the current date through 30 days after the current date.
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        description: Calendar date at day grain. This is the canonical date column for joining facts, driving date filters, and serving as the standard granularity column for the semantic layer time spine.
+        granularity: day
+        data_tests:
+          - not_null
+          - unique
