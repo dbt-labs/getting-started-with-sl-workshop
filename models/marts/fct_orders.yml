@@ -109,10 +109,6 @@ metrics:
     numerator: revenue
     denominator: distinct_orders
 
-
-
-
-
   ## derived metrics
   - name: "pct_of_orders_that_are_large"
     label: "pct_of_orders_that_are_large"
@@ -122,3 +118,18 @@ metrics:
     input_metrics:
       - name: orders_over_twenty
       - name: distinct_orders
+
+saved_queries:
+  - name: top_10_customers_by_revenue
+    description: Top customers ranked by total revenue.
+    label: Top Customers by Revenue
+    query_params:
+      metrics:
+        - revenue
+      group_by:
+        - Entity('customer_id')
+    exports:
+      - name: top_10_customers_by_revenue
+        config:
+          export_as: table
+          schema: analytics
