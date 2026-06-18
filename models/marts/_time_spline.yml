@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: time_spine_daily
+    description: >
+      Daily date spine used as a canonical calendar table for joining facts and
+      dimensions at the day grain. This model contains one row per date and
+      serves as the shared calendar backbone for time-series reporting,
+      gap-filling, and period-based analysis.
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        description: Calendar date at day grain.
+        granularity: day
