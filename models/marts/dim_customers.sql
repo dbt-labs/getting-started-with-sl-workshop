@@ -22,7 +22,21 @@ final as (
        customer_orders.first_order_date,
        customer_orders.most_recent_order_date,
        coalesce(customer_orders.number_of_orders, 0) as number_of_orders,
-       customer_orders.lifetime_value
+       coalesce(customer_orders.lifetime_value, 0) as lifetime_value,
+       case
+           when coalesce(customer_orders.number_of_orders, 0) > 0 then 'true'
+           else 'false'
+       end as has_orders,
+       case
+           when coalesce(customer_orders.number_of_orders, 0) > 1 then 'true'
+           else 'false'
+       end as is_repeat_customer,
+       case
+           when coalesce(customer_orders.lifetime_value, 0) = 0 then 'no_value'
+           when coalesce(customer_orders.lifetime_value, 0) < 50 then 'low'
+           when coalesce(customer_orders.lifetime_value, 0) < 150 then 'medium'
+           else 'high'
+       end as customer_value_segment
    from customers
    left join customer_orders using (customer_id)
 )

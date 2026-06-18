@@ -1,0 +1,87 @@
+models:
+  - name: dim_customers
+    description: Customer dimension with first order, most recent order, order count, and lifetime value.
+    semantic_model:
+      enabled: true
+      name: customers
+    agg_time_dimension: most_recent_order_date
+    columns:
+      - name: customer_id
+        description: Primary key for each customer.
+        entity:
+          type: primary
+          name: customer
+
+      - name: first_name
+        description: Customer first name.
+        dimension:
+          type: categorical
+          name: first_name
+
+      - name: last_name
+        description: Customer last name.
+        dimension:
+          type: categorical
+          name: last_name
+
+      - name: first_order_date
+        description: Date of the customer's first order.
+        granularity: day
+        dimension:
+          type: time
+          name: first_order_date
+
+      - name: most_recent_order_date
+        description: Date of the customer's most recent order.
+        granularity: day
+        dimension:
+          type: time
+          name: most_recent_order_date
+      - name: has_orders
+        description: Flag indicating whether the customer has placed at least one order.
+        dimension:
+          type: categorical
+          name: has_orders
+
+      - name: is_repeat_customer
+        description: Flag indicating whether the customer has placed more than one order.
+        dimension:
+          type: categorical
+          name: is_repeat_customer
+
+      - name: customer_value_segment
+        description: Bucketed customer lifetime value segment.
+        dimension:
+          type: categorical
+          name: customer_value_segment
+
+
+
+    metrics:
+      - name: customer_count
+        description: Total number of customers.
+        type: simple
+        label: Customer Count
+        agg: count_distinct
+        expr: customer_id
+
+      - name: total_customer_lifetime_value
+        description: Total lifetime value across customers.
+        type: simple
+        label: Total Customer Lifetime Value
+        agg: sum
+        expr: lifetime_value
+
+      - name: average_customer_lifetime_value
+        description: Average lifetime value per customer.
+        type: simple
+        label: Average Customer Lifetime Value
+        agg: average
+        expr: lifetime_value
+
+      - name: total_customer_orders
+        description: Total number of orders across customers.
+        type: simple
+        label: Total Customer Orders
+        agg: sum
+        expr: number_of_orders

@@ -1,0 +1,161 @@
+models:
+  - name: fct_orders
+    description: Order fact table with one row per order and successful payment amount.
+    semantic_model:
+      enabled: true
+      name: orders
+    agg_time_dimension: order_date
+    columns:
+      - name: order_id
+        description: Primary key for each order.
+        entity:
+          type: primary
+          name: orders
+
+      - name: customer_id
+        description: Customer associated with the order.
+        entity:
+          type: foreign
+          name: customer
+
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+          name: order_date
+      - name: amount_band
+        description: Bucketed order amount band.
+        dimension:
+          type: categorical
+          name: amount_band
+
+      - name: is_order_over_20
+        description: Flag indicating whether the order amount is greater than 20.
+        dimension:
+          type: categorical
+          name: is_order_over_20
+
+      - name: is_zero_amount_order
+        description: Flag indicating whether the order amount is zero.
+        dimension:
+          type: categorical
+          name: is_zero_amount_order
+
+
+
+    metrics:
+      - name: order_total
+        description: Total successful payment amount across orders.
+        type: simple
+        label: Order Total
+        agg: sum
+        expr: amount
+
+      - name: order_count
+        description: Total number of orders.
+        type: simple
+        label: Order Count
+        agg: count_distinct
+        expr: order_id
+
+      - name: customers_with_orders
+        description: Distinct count of customers placing orders.
+        type: simple
+        label: Customers With Orders
+        agg: count_distinct
+        expr: customer_id
+
+      - name: order_value_p99
+        description: 99th percentile of order value.
+        type: simple
+        label: Order Value P99
+        agg: percentile
+        expr: amount
+        percentile: 99.0
+        percentile_type: discrete
+
+      - name: median_order_value
+        description: Median order value.
+        type: simple
+        label: Median Order Value
+        agg: median
+        expr: amount
+
+      - name: orders_over_20_count
+        description: Number of orders with order total greater than 20.
+        type: simple
+        label: Orders Over 20 Count
+        agg: count_distinct
+        expr: order_id
+        filter: |
+          {{ Metric('order_total', group_by=['orders']) }} > 20
+
+      - name: order_total_over_20
+        description: Total value of orders with order total greater than 20.
+        type: simple
+        label: Order Total Over 20
+        agg: sum
+        expr: amount
+        filter: |
+          {{ Metric('order_total', group_by=['orders']) }} > 20
+
+      - name: zero_amount_orders_count
+        description: Number of orders with zero successful payment amount.
+        type: simple
+        label: Zero Amount Orders Count
+        agg: count_distinct
+        expr: order_id
+        filter: |
+          {{ Metric('order_total', group_by=['orders']) }} = 0
+
+      - name: avg_order_value
+        label: Average Order Value
+        description: Average value of each order.
+        type: ratio
+        numerator: order_total
+        denominator: order_count
+
+      - name: pct_orders_over_20
+        label: Percent of Orders Over 20
+        description: Percentage of orders with order total greater than 20.
+        type: ratio
+        numerator: orders_over_20_count
+        denominator: order_count
+
+      - name: avg_order_value_over_20
+        label: Average Order Value Over 20
+        description: Average value of orders with order total greater than 20.
+        type: ratio
+        numerator: order_total_over_20
+        denominator: orders_over_20_count
+
+      - name: pct_orders_zero_amount
+        label: Percent of Orders with Zero Amount
+        description: Percentage of orders with zero successful payment amount.
+        type: ratio
+        numerator: zero_amount_orders_count
+        denominator: order_count
+
+      - name: pct_revenue_from_orders_over_20
+        label: Percent of Revenue from Orders Over 20
+        description: Percentage of total revenue coming from orders greater than 20.
+        type: ratio
+        numerator: order_total_over_20
+        denominator: order_total
+
+      - name: cumulative_order_amount_mtd
+        label: Cumulative Order Amount MTD
+        description: The month-to-date value of all orders.
+        type: cumulative
+        grain_to_date: month
+        input_metric: order_total
+
+      - name: order_value_over_20_premium
+        label: Order Value Over 20 Premium
+        description: Incremental average order value of orders over 20 versus all orders.
+        type: derived
+        expr: avg_order_value_over_20 - avg_order_value
+        input_metrics:
+          - name: avg_order_value_over_20
+          - name: avg_order_value

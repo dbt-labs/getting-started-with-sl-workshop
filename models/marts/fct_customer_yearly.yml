@@ -1,0 +1,94 @@
+models:
+  - name: fct_customer_yearly
+    description: Yearly customer order fact table with one row per customer per year.
+    semantic_model:
+      enabled: true
+      name: customer_yearly
+    agg_time_dimension: order_year
+    primary_entity: customer
+    columns:
+      - name: customer_id
+        description: Customer for the yearly grain.
+        entity:
+          type: foreign
+          name: customer
+
+      - name: order_year
+        description: Order year for the yearly customer grain.
+        granularity: year
+        dimension:
+          type: time
+          name: order_year
+
+    metrics:
+      - name: customer_yearly_order_count
+        description: Total number of customer-year orders.
+        type: simple
+        label: Customer Yearly Order Count
+        agg: sum
+        expr: order_count
+
+      - name: customer_yearly_order_amount
+        description: Total customer-year order amount.
+        type: simple
+        label: Customer Yearly Order Amount
+        agg: sum
+        expr: order_amount
+
+      - name: customer_yearly_avg_order_amount
+        description: Average order amount across customer-year rows.
+        type: simple
+        label: Customer Yearly Avg Order Amount
+        agg: average
+        expr: avg_order_amount
+
+      - name: customer_yearly_orders_over_20_count
+        description: Number of customer-year orders over 20.
+        type: simple
+        label: Customer Yearly Orders Over 20 Count
+        agg: sum
+        expr: orders_over_20_count
+
+      - name: customer_yearly_order_amount_over_20
+        description: Total customer-year order amount over 20.
+        type: simple
+        label: Customer Yearly Order Amount Over 20
+        agg: sum
+        expr: order_amount_over_20
+
+      - name: customer_yearly_zero_amount_orders_count
+        description: Number of customer-year orders with zero amount.
+        type: simple
+        label: Customer Yearly Zero Amount Orders Count
+        agg: sum
+        expr: zero_amount_orders_count
+
+      - name: pct_customer_yearly_orders_over_20
+        description: Percentage of customer-year orders over 20.
+        type: ratio
+        label: Percent Customer Yearly Orders Over 20
+        numerator: customer_yearly_orders_over_20_count
+        denominator: customer_yearly_order_count
+
+      - name: pct_customer_yearly_zero_amount_orders
+        description: Percentage of customer-year orders with zero amount.
+        type: ratio
+        label: Percent Customer Yearly Zero Amount Orders
+        numerator: customer_yearly_zero_amount_orders_count
+        denominator: customer_yearly_order_count
+
+      - name: customer_yearly_avg_order_amount_over_20
+        description: Average customer-year order amount for orders over 20.
+        type: ratio
+        label: Customer Yearly Avg Order Amount Over 20
+        numerator: customer_yearly_order_amount_over_20
+        denominator: customer_yearly_orders_over_20_count
+
+      - name: customer_yearly_order_value_over_20_premium
+        description: Difference between yearly order value over 20 and average yearly order value.
+        type: derived
+        label: Customer Yearly Order Value Over 20 Premium
+        expr: customer_yearly_avg_order_amount_over_20 - customer_yearly_avg_order_amount
+        input_metrics:
+          - name: customer_yearly_avg_order_amount_over_20
+          - name: customer_yearly_avg_order_amount
