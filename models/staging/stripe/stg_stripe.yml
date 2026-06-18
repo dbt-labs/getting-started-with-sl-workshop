@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: stg_payments
+    description: One row per payment transaction from Stripe, with identifiers renamed and amounts converted from cents to dollars.
+    columns:
+      - name: payment_id
+        description: Primary key for the payment transaction.
+        data_tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: Foreign key to the order associated with the payment.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: payment_method
+        description: Payment method used for the transaction.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['credit_card', 'coupon', 'bank_transfer', 'gift_card']
+      - name: status
+        description: Status of the payment transaction after processing.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['success', 'fail']
+      - name: amount
+        description: Payment amount in dollars.
+        data_tests:
+          - not_null
+      - name: created_at
+        description: Timestamp when the payment transaction was created.
+        data_tests:
+          - not_null

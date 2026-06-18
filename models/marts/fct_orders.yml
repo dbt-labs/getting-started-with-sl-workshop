@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: fct_orders
-    description: One row per order with the customer who placed it, the order date, and the total successful payment amount captured for that order. This model is the clean fact table for order-level revenue analysis and defaults unpaid or failed-payment orders to `0`.
+    description: One row per order with the customer who placed it, the order date, and the total successful payment amount captured for that order. This model is the clean fact table for order-level revenue and order volume analysis.
     semantic_model:
       enabled: true
     agg_time_dimension: order_date
@@ -12,24 +12,35 @@ models:
         entity:
           type: primary
           name: orders
+        data_tests:
+          - unique
+          - not_null
 
       - name: customer_id
         description: Identifier for the customer who placed the order.
         entity:
           type: foreign
           name: customer
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_id
 
       - name: order_date
         description: Date the order was placed.
         granularity: day
         dimension:
           type: time
+        data_tests:
+          - not_null
 
       - name: amount
         description: Sum of successful payment amounts for the order in dollars. Orders with no successful payments return `0`.
-        dimension:
-          type: categorical
-          
+        data_tests:
+          - not_null
+
     metrics:
       - name: order_count
         description: Count of orders in `fct_orders`.
@@ -84,6 +95,7 @@ models:
         type: cumulative
         label: Cumulative Order Count
         input_metric: order_count
+
       - name: amount_p95
         description: 95th percentile of order payment amount in dollars.
         type: simple
@@ -92,4 +104,61 @@ models:
         expr: amount
         percentile: 95.0
         percentile_type: discrete
+
+      - name: large_order_count
+        description: Count of orders with payment amount of at least 100 dollars.
+        type: simple
+        label: Large Order Count
+        agg: count
+        expr: 1
+        filter: |
+          {{ Dimension('orders__amount') }} >= 100
+
+      - name: large_order_amount
+        description: Total payment amount from orders with payment amount of at least 100 dollars.
+        type: simple
+        label: Large Order Amount
+        agg: sum
+        expr: amount
+        filter: |
+          {{ Dimension('orders__amount') }} >= 100
+
+      - name: large_order_percentage
+        description: Percentage of orders that qualify as large orders with payment amount of at least 100 dollars.
+        type: ratio
+        label: Large Order Percentage
+        numerator: large_order_count
+        denominator: order_count
+
+      - name: cumulative_total_order_amount_l30d
+        description: Trailing 30-day cumulative successful payment amount.
+        type: cumulative
+        label: Cumulative Total Order Amount Last 30 Days
+        window: 30 days
+        input_metric: total_order_amount
+
+      - name: cumulative_total_order_amount_mtd
+        description: Month-to-date cumulative successful payment amount.
+        type: cumulative
+        label: Cumulative Total Order Amount MTD
+        grain_to_date: month
+        input_metric: total_order_amount
+
+      - name: cumulative_total_order_amount_l7d
+        description: Trailing 7-day cumulative successful payment amount.
+        type: cumulative
+        label: Cumulative Total Order Amount Last 7 Days
+        window: 7 days
+        input_metric: total_order_amount
+
+      - name: non_large_order_amount
+        description: Revenue from orders below the large-order threshold.
+        type: derived
+        label: Non Large Order Amount
+        expr: total_revenue - large_revenue
+        input_metrics:
+          - name: total_order_amount
+            alias: total_revenue
+          - name: large_order_amount
+            alias: large_revenue
 

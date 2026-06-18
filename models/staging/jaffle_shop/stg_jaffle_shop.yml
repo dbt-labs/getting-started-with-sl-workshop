@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: One row per customer from `jaffle_shop.customers`, renamed into analytics-friendly fields.
+    columns:
+      - name: customer_id
+        description: Primary key for the customer.
+        data_tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: Customer first name from the source system.
+      - name: last_name
+        description: Customer last name from the source system.
+
+  - name: stg_orders
+    description: One row per order from `jaffle_shop.orders`, with renamed identifiers for downstream marts.
+    columns:
+      - name: order_id
+        description: Primary key for the order.
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: Foreign key to the customer who placed the order.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+      - name: order_date
+        description: Date the order was placed.
+        data_tests:
+          - not_null
+      - name: status
+        description: Standardized order status from the source system.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['placed', 'shipped', 'completed', 'return_pending', 'returned']

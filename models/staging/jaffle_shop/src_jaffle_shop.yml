@@ -1,9 +1,48 @@
 version: 2
 
 sources:
- - name: jaffle_shop
-   database: raw
-   schema: jaffle_shop
-   tables:
-     - name: customers
-     - name: orders
+  - name: jaffle_shop
+    description: Raw application data for the demo storefront, including customer records and order events.
+    database: raw
+    schema: jaffle_shop
+    tables:
+      - name: customers
+        description: Raw customer records from the storefront application.
+        columns:
+          - name: id
+            description: Primary key for the raw customer record.
+            data_tests:
+              - unique
+              - not_null
+          - name: first_name
+            description: Customer first name as captured in the application.
+          - name: last_name
+            description: Customer last name as captured in the application.
+
+      - name: orders
+        description: Raw order records from the storefront application.
+        columns:
+          - name: id
+            description: Primary key for the raw order record.
+            data_tests:
+              - unique
+              - not_null
+          - name: user_id
+            description: Foreign key to the customer who placed the order.
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('jaffle_shop', 'customers')
+                    field: id
+          - name: order_date
+            description: Date the order was placed in the application.
+            data_tests:
+              - not_null
+          - name: status
+            description: Raw lifecycle status for the order.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['placed', 'shipped', 'completed', 'return_pending', 'returned']

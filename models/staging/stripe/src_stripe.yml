@@ -1,8 +1,42 @@
 version: 2
 
 sources:
- - name: stripe
-   database: raw
-   schema: stripe
-   tables:
-     - name: payment
+  - name: stripe
+    description: Raw payment events from Stripe used to attribute revenue to orders.
+    database: raw
+    schema: stripe
+    tables:
+      - name: payment
+        description: Raw Stripe payment records at the payment transaction grain.
+        columns:
+          - name: id
+            description: Primary key for the raw payment transaction.
+            data_tests:
+              - unique
+              - not_null
+          - name: orderid
+            description: Foreign key to the order associated with the payment.
+            data_tests:
+              - not_null
+          - name: paymentmethod
+            description: Payment method used for the transaction.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['credit_card', 'coupon', 'bank_transfer', 'gift_card']
+          - name: status
+            description: Processing status for the payment transaction.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['success', 'fail']
+          - name: amount
+            description: Payment amount in cents as received from Stripe.
+            data_tests:
+              - not_null
+          - name: created
+            description: Timestamp when the payment transaction was created in Stripe.
+            data_tests:
+              - not_null

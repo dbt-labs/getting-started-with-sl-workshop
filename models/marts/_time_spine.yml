@@ -1,8 +1,14 @@
-models: 
-# Daily time spine
+version: 2
+
+models:
   - name: time_spine_daily
+    description: Daily time spine used by cumulative semantic-layer metrics to backfill missing calendar dates.
     time_spine:
-      standard_granularity_column: date_day # column for the standard grain of your table
+      standard_granularity_column: date_day
     columns:
       - name: date_day
-        granularity: day # set granularity at column-level for standard_granularity_column
+        description: Calendar date at day grain.
+        granularity: day
+        data_tests:
+          - unique
+          - not_null

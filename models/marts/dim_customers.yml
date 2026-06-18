@@ -1,0 +1,206 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: One row per customer with customer attributes and order history rolled up from `fct_orders`. This model is the customer dimension for acquisition, retention, and lifetime value analysis.
+    semantic_model:
+      enabled: true
+      name: customers
+      config:
+        meta:
+          owner: analytics
+          semantic_model_type: dimension_with_rollups
+
+    agg_time_dimension: first_order_date
+    columns:
+      - name: customer_id
+        description: Primary key for the customer.
+        entity:
+          type: primary
+          name: customer
+        data_tests:
+          - unique
+          - not_null
+
+      - name: first_name
+        description: Customer first name from the source system.
+        dimension:
+          type: categorical
+
+      - name: last_name
+        description: Customer last name from the source system.
+        dimension:
+          type: categorical
+
+      - name: first_order_date
+        description: Date of the customer's first recorded order. Used as the customer acquisition date.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: most_recent_order_date
+        description: Date of the customer's most recent recorded order.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: number_of_orders
+        description: Total count of orders placed by the customer across all time.
+        data_tests:
+          - not_null
+
+      - name: lifetime_value
+        description: Total successful payment amount attributed to the customer across all orders.
+
+    derived_semantics:
+      dimensions:
+        - name: full_name
+          type: categorical
+          expr: "concat(first_name, ' ', last_name)"
+
+        - name: has_orders
+          type: categorical
+          expr: "case when coalesce(number_of_orders, 0) > 0 then true else false end"
+
+        - name: is_repeat_customer
+          type: categorical
+          expr: "case when coalesce(number_of_orders, 0) > 1 then true else false end"
+
+        - name: customer_value_tier
+          type: categorical
+          expr: "case when coalesce(lifetime_value, 0) >= 200 then 'high_value' when coalesce(lifetime_value, 0) >= 100 then 'mid_value' when coalesce(lifetime_value, 0) > 0 then 'low_value' else 'no_value' end"
+
+    metrics:
+      - name: customer_count
+        description: Count of customer records.
+        type: simple
+        label: Customer Count
+        agg: count
+        expr: 1
+        join_to_timespine: true
+        fill_nulls_with: 0
+
+      - name: customers_with_orders
+        description: Count of customers who have placed at least one order.
+        type: simple
+        label: Customers With Orders
+        agg: count
+        expr: 1
+        filter: |
+          {{ Dimension('customer__has_orders') }} = true
+        join_to_timespine: true
+        fill_nulls_with: 0
+
+      - name: repeat_customers
+        description: Count of customers with more than one order.
+        type: simple
+        label: Repeat Customers
+        agg: count
+        expr: 1
+        filter: |
+          {{ Dimension('customer__is_repeat_customer') }} = true
+        join_to_timespine: true
+        fill_nulls_with: 0
+
+      - name: total_customer_lifetime_value
+        description: Sum of customer lifetime value across all customers.
+        type: simple
+        label: Total Customer Lifetime Value
+        agg: sum
+        expr: lifetime_value
+        fill_nulls_with: 0
+
+      - name: average_customer_lifetime_value
+        description: Average lifetime value per customer.
+        type: simple
+        label: Average Customer Lifetime Value
+        agg: average
+        expr: lifetime_value
+        fill_nulls_with: 0
+
+      - name: total_orders_from_customers
+        description: Total number of orders attributed to customers.
+        type: simple
+        label: Total Orders From Customers
+        agg: sum
+        expr: number_of_orders
+        fill_nulls_with: 0
+
+      - name: average_orders_per_customer
+        description: Average number of orders per customer.
+        type: simple
+        label: Average Orders Per Customer
+        agg: average
+        expr: number_of_orders
+        fill_nulls_with: 0
+
+      - name: customer_lifetime_value_p95
+        description: 95th percentile of customer lifetime value.
+        type: simple
+        label: Customer Lifetime Value P95
+        agg: percentile
+        expr: lifetime_value
+        percentile: 95.0
+        percentile_type: discrete
+
+      - name: customers_by_recent_order_date
+        description: Count of customers bucketed by their most recent order date instead of acquisition date.
+        type: simple
+        label: Customers by Recent Order Date
+        agg: count
+        expr: 1
+        agg_time_dimension: most_recent_order_date
+        join_to_timespine: true
+        fill_nulls_with: 0
+
+      - name: repeat_customer_rate
+        description: Share of customers who have placed more than one order.
+        type: ratio
+        label: Repeat Customer Rate
+        numerator: repeat_customers
+        denominator: customers_with_orders
+
+      - name: ordering_customer_rate
+        description: Share of customers who have placed at least one order.
+        type: ratio
+        label: Ordering Customer Rate
+        numerator: customers_with_orders
+        denominator: customer_count
+
+      - name: average_customer_lifetime_value_per_order
+        description: Average lifetime value per order across the customer base.
+        type: ratio
+        label: Average Customer Lifetime Value Per Order
+        numerator: total_customer_lifetime_value
+        denominator: total_orders_from_customers
+
+      - name: one_time_customers
+        description: Count of customers who have ordered exactly once or not yet become repeat customers.
+        type: derived
+        label: One Time Customers
+        expr: all_customers - repeaters
+        input_metrics:
+          - name: customers_with_orders
+            alias: all_customers
+          - name: repeat_customers
+            alias: repeaters
+
+      - name: cumulative_customer_count
+        description: Running total of customers by first order date.
+        type: cumulative
+        label: Cumulative Customer Count
+        input_metric: customer_count
+
+      - name: cumulative_customer_count_l30d
+        description: Trailing 30-day cumulative count of customers by first order date.
+        type: cumulative
+        label: Cumulative Customer Count Last 30 Days
+        window: 30 days
+        input_metric: customer_count
+
+      - name: cumulative_customer_count_mtd
+        description: Month-to-date cumulative count of customers by first order date.
+        type: cumulative
+        label: Cumulative Customer Count MTD
+        grain_to_date: month
+        input_metric: customer_count
