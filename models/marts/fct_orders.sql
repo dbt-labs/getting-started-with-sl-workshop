@@ -1,4 +1,4 @@
-4
+
 with orders as  (
    select * from {{ ref('stg_orders' )}}
 ),
