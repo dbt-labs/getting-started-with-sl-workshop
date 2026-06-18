@@ -1,0 +1,90 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+    description: Fact table with one row per order, including the customer, order date, and total successful payment amount.
+    columns:
+      # Entities
+      - name: order_id
+        entity:
+          type: primary
+          name: order_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: Foreign key to the customer who placed the order.
+        entity:
+          name: customer
+          type: foreign
+        data_tests:
+          - not_null
+
+      # Dimensions
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+        data_tests:
+          - not_null
+
+      - name: amount
+        description: Total successful payment amount for the order. Defaults to 0 when no successful payments exist.
+
+    ## Metrics
+    metrics:
+      - name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+
+      - name: avg_revenue
+        type: simple
+        agg: average
+        expr: amount
+
+      - name: distinct_customer
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: distinct_orders
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+      - name: order_value_p99
+        type: simple
+        agg: percentile
+        expr: amount
+        percentile: 0.99
+        percentile_type: continuous
+
+      - name: order_value_discrete_p99
+        type: simple
+        agg: percentile
+        expr: amount
+        percentile: 0.99
+        percentile_type: discrete
+
+      - name: large_orders
+        type: simple
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount')}} >= 100
+metrics:
+  - name: large_orders_percentage
+    type: ratio
+    numerator: large_orders
+    denominator: distinct_orders
+
+  - name: cumulative_revenue_l30d
+    type: cumulative
+    input_metric: revenue
+    window: 30 days
