@@ -1,0 +1,66 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+    description: Fact table with one row per order and the total successful payment amount collected for that order.
+    columns:
+      - name: order_id
+        description: Primary key for the order.
+        data_tests:
+          - not_null
+          - unique
+        entity:
+          type: primary
+          name: order_id
+
+      - name: customer_id
+        description: Identifier for the customer who placed the order.
+        entity:
+          name: customer
+          type: foreign
+# Dimensions 
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: amount
+        description: Total amount paid successfully for the order in dollars. Defaults to 0 when an order has no successful payments.
+        dimension:
+          type: categorical
+
+    # Newly added - Simple metrics
+    metrics:
+      - name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+
+      # - name: order_total
+      #   description: The total amount for each order including taxes
+      #   type: simple
+      #   label: Order total
+      #   agg: sum
+      #   expr: amount
+      # - name: order_count
+      #   type: simple
+      #   label: Order count
+      #   agg: sum
+      #   expr: 1
+      # - name: customers_with_orders
+      #   description: Distinct count of customers placing orders
+      #   type: simple
+      #   label: Customers with orders
+      #   agg: count_distinct
+      #   expr: customer_id
+      # - name: order_value_p99
+      #   type: simple
+      #   label: Order value P99
+      #   agg: percentile
+      #   expr: amount
+      #   percentile: 99.0
+      #   percentile_type: discrete
