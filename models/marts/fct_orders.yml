@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: |
+      One row per order with the customer, order date, and total successful payment amount.
+      This model joins staged orders to staged payments and rolls payments up to the order grain.
+    semantic_model: 
+      enabled: true
+    agg_time_dimension: order_date
+    columns:
+      - name: order_id
+        description: Primary key for the order.
+        entity: 
+          type: primary
+          name: order_id
+
+      - name: customer_id
+        description: Identifier for the customer who placed the order.
+        entity: 
+          type: foreign
+          name: customer_id
+      - name: order_date
+        description: Date the order was placed.
+
+      - name: amount
+        description: Total dollar amount successfully paid for the order. Defaults to 0 when an order has no successful payments.
