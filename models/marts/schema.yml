@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: One row per order with the associated customer, order date, and total successful payment amount. This model rolls up payment records from Stripe to the order grain so downstream marts can analyze order volume and customer value without re-aggregating payments.
+    columns:
+      - name: order_id
+        description: Primary key for the order. Sourced from `jaffle_shop.orders.id` and used to join order facts to downstream customer reporting.
+      - name: customer_id
+        description: Identifier for the customer who placed the order. Sourced from `jaffle_shop.orders.user_id`.
+      - name: order_date
+        description: Date the order was placed, from the source order record.
+      - name: amount
+        description: Total successful payment amount for the order in dollars. This sums only Stripe payment records with `status = 'success'` and defaults to `0` when an order has no successful payments.
