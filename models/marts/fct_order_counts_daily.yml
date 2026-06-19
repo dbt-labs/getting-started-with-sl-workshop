@@ -1,0 +1,14 @@
+models:
+  - name: fct_order_counts_daily
+    description: Daily order counts aggregated from `fct_orders`.
+    columns:
+      - name: order_date
+        description: Order date at daily grain.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: order_count
+        description: Count of orders on that date.
+        data_tests:
+          - not_null

@@ -1,0 +1,14 @@
+models:
+  - name: fct_order_totals_daily
+    description: Daily order revenue aggregated from `fct_orders`.
+    columns:
+      - name: order_date
+        description: Order date at daily grain.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: order_total
+        description: Sum of successful payment amount for orders on that date.
+        data_tests:
+          - not_null

@@ -1,0 +1,29 @@
+models:
+  - name: fct_order_totals_by_customer
+    description: Customer-level order revenue and order counts aggregated from `fct_orders`.
+    columns:
+      - name: customer_id
+        description: Customer identifier.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: order_total
+        description: Total successful payment amount across all orders for the customer.
+        data_tests:
+          - not_null
+
+      - name: order_count
+        description: Count of orders placed by the customer.
+        data_tests:
+          - not_null
+
+      - name: first_order_date
+        description: First order date for the customer.
+        data_tests:
+          - not_null
+
+      - name: most_recent_order_date
+        description: Most recent order date for the customer.
+        data_tests:
+          - not_null
