@@ -1,0 +1,50 @@
+models:
+  - name: fct_orders
+    description: |
+      Order fact table. This table's grain is one row per order.
+    semantic_model:
+      enabled: true
+      name: orders
+      
+    agg_time_dimension: order_date
+    columns:
+      # Entities
+      - name: order_id
+        entity:
+          type: primary
+          name: order_id
+      - name: customer_id
+        entity:
+          name: customer
+          type: foreign
+          # Newly added - Dimensions      
+      - name: order_date
+        granularity: day
+        dimension:
+          type: time
+          # Newly added - Simple metrics
+    metrics:
+      - name: order_total
+        description: The total amount for each order including taxes
+        type: simple
+        label: Order total
+        agg: sum
+        expr: amount
+      - name: order_count
+        type: simple
+        label: Order count
+        agg: sum
+        expr: 1
+      - name: customers_with_orders
+        description: Distinct count of customers placing orders
+        type: simple
+        label: Customers with orders
+        agg: count_distinct
+        expr: customer_id
+      - name: order_value_p99
+        type: simple
+        label: Order value P99
+        agg: percentile
+        expr: amount
+        percentile: 99.0
+        percentile_type: discrete
