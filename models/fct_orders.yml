@@ -1,47 +1,71 @@
 models:
   - name: fct_orders
     description: |
-      Order fact table. This table's grain is one row per order.
+      Order fact table with one row per order and the successfully paid amount for that order.
     semantic_model:
       enabled: true
       name: orders
-      
     agg_time_dimension: order_date
     columns:
-      # Entities
       - name: order_id
+        description: Primary key for the order.
+        data_tests:
+          - not_null
+          - unique
         entity:
           type: primary
           name: order_id
+
       - name: customer_id
+        description: Customer who placed the order.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+
         entity:
           name: customer
           type: foreign
-          # Newly added - Dimensions      
+
       - name: order_date
+        description: Date the order was placed.
+        data_tests:
+          - not_null
         granularity: day
         dimension:
           type: time
-          # Newly added - Simple metrics
+
+      - name: amount
+        description: Total successful payment amount for the order.
+        data_tests:
+          - not_null
+
     metrics:
       - name: order_total
-        description: The total amount for each order including taxes
+        description: Total amount for orders including successful payments.
         type: simple
         label: Order total
         agg: sum
         expr: amount
+
       - name: order_count
+        description: Count of orders.
         type: simple
         label: Order count
-        agg: sum
-        expr: 1
+        agg: count
+        expr: order_id
+
       - name: customers_with_orders
-        description: Distinct count of customers placing orders
+        description: Distinct count of customers placing orders.
         type: simple
         label: Customers with orders
         agg: count_distinct
         expr: customer_id
+
       - name: order_value_p99
+        description: 99th percentile of order value.
         type: simple
         label: Order value P99
         agg: percentile
