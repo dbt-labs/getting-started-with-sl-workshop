@@ -1,0 +1,76 @@
+models:
+  - name: fct_orders
+    semantic_model:
+      enabled: true
+      name: orders
+      
+    agg_time_dimension: order_date
+    
+    columns:
+      # Entities
+      - name: order_id
+        entity:
+          type: primary
+          name: order_id
+      - name: customer_id
+        entity:
+          name: customer
+          type: foreign
+      # Newly added - Dimensions      
+      - name: order_date
+        granularity: day
+        dimension:
+          type: time
+      - name: amount
+        dimension: 
+          type: categorical
+    # Newly added - Simple metrics
+    metrics:
+      - name: order_total
+        description: The total amount for each order including taxes
+        type: simple
+        label: Order total
+        agg: sum
+        expr: amount
+      - name: order_count
+        type: simple
+        label: Order count
+        agg: sum
+        expr: 1
+      - name: unique_customers_with_orders
+        description: Distinct count of customers placing orders
+        type: simple
+        label: Unique customers with orders
+        agg: count_distinct
+        expr: customer_id
+      - name: large_orders
+        description: Count of orders with order total over 20
+        type: simple
+        label: Large orders
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount') }} >= 20
+      # Ratio type metric
+      - name: avg_order_value
+        label: Average order value
+        description: Average value of each order
+        type: ratio
+        numerator: order_total
+        denominator: order_count
+      # Cumulative type metrics
+      - name: cumulative_order_amount_mtd
+        label: Cumulative order amount MTD
+        description: The month to date value of all orders
+        type: cumulative
+        grain_to_date: month
+        input_metric: order_total
+      # Derived metric
+      - name: pct_of_orders_that_are_large
+        label: Percent of orders that are large
+        description: Percent of orders that are large
+        type: derived
+        expr: large_orders / order_count
+        input_metrics:
+          - name: large_orders
+          - name: order_count
