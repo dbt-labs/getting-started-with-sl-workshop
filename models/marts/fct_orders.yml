@@ -1,0 +1,90 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model: 
+      enabled: true
+      name: orders
+    agg_time_dimension: order_date
+    description: |
+      Fact table at the order grain with one row per order.
+
+      This model combines order attributes from `stg_orders` with successful payment amounts
+      from `stg_payments` so downstream marts can analyze order volume and collected revenue
+      without re-implementing payment aggregation logic.
+    columns:
+      - name: order_id
+        description: Primary key for the order grain; one row per order in this model.
+        entity:
+          type: primary
+          name: order_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        entity:
+          name: customer
+          type: foreign
+        description: Identifier for the customer who placed the order.
+
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+      - name: amount
+        description: Total successful payment amount collected for the order, defaulting to 0 when no successful payment exists.
+        dimension:
+          type: categorical
+    metrics:
+      - hidden: false
+        name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+      - name: avg_order_value
+        type: simple
+        agg: average
+        expr: amount
+      - name: distinct_customers
+        description: Distinct count of customers placing orders
+        type: simple
+        label: Customers with orders
+        agg: count_distinct
+        expr: customer_id
+      - name: distinct_orders
+        description: Distinct count of orders
+        type: simple
+        agg: count_distinct
+        expr: order_id
+      - name: order_value_p99
+        type: simple
+        label: Order value P99
+        agg: percentile
+        expr: amount
+        percentile: 99.0
+        percentile_type: discrete
+      - name: large_orders
+        type: simple
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount') }} >= 20     
+metrics:
+  - name: large_order_percentage
+    type: ratio
+    numerator: large_orders
+    denominator: distinct_orders
+  - name: average_order_value
+    type: ratio
+    numerator: revenue
+    denominator: distinct_orders
+  - name: revenue_cummulative_td
+    type: cumulative
+    window: 30 days
+    input_metric: revenue
+  - name: revenue_cummulative_mtd
+    type: cumulative
+    grain_to_date: month
+    input_metric: revenue    
