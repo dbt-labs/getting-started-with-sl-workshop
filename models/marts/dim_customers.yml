@@ -1,0 +1,117 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: "Customer dimension with one row per customer, enriched with order history metrics including first order date, most recent order date, order count, and lifetime value. Use this model to join customer attributes to downstream marts and expose customer-level metrics."
+    semantic_model:
+      enabled: true
+    agg_time_dimension: first_order_date
+    columns:
+      - name: customer_id
+        description: "Primary key for the customer. One row per customer in this model."
+        entity:
+          type: primary
+          name: customer
+        data_tests:
+          - unique
+          - not_null
+
+      - name: first_name
+        description: "Customer's first name from the staged customer record."
+        dimension:
+          type: categorical
+
+      - name: last_name
+        description: "Customer's last name from the staged customer record."
+        dimension:
+          type: categorical
+
+      - name: first_order_date
+        description: "Date of the customer's first recorded order. Null when the customer has not placed an order."
+        granularity: day
+        dimension:
+          type: time
+
+      - name: most_recent_order_date
+        description: "Date of the customer's most recent recorded order. Null when the customer has not placed an order."
+        granularity: day
+        dimension:
+          type: time
+
+      - name: number_of_orders
+        description: "Total count of orders placed by the customer. Defaults to 0 for customers with no orders."
+        data_tests:
+          - not_null
+        dimension:
+          type: categorical
+
+      - name: lifetime_value
+        description: "Total order amount summed across all of the customer's orders. Null when the customer has not placed an order."
+        dimension:
+          type: categorical
+
+    metrics:
+      - name: customer_count
+        description: "Count of customers in the customer dimension."
+        label: Customer Count
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: customers_with_orders
+        description: "Count of customers who have placed at least one order."
+        label: Customers With Orders
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+        filter: |
+          {{ Dimension('customer__first_order_date') }} is not null
+
+      - name: total_number_of_orders
+        description: "Sum of all orders across customers."
+        label: Total Number of Orders
+        type: simple
+        agg: sum
+        expr: number_of_orders
+
+      - name: total_customer_lifetime_value
+        description: "Sum of customer lifetime value across all customers."
+        label: Total Customer Lifetime Value
+        type: simple
+        agg: sum
+        expr: lifetime_value
+
+      - name: average_customer_lifetime_value
+        description: "Average lifetime value per customer."
+        label: Average Customer Lifetime Value
+        type: simple
+        agg: average
+        expr: lifetime_value
+
+
+metrics:
+  - name: customer_purchase_rate
+    description: "Share of customers who have placed at least one order."
+    label: Customer Purchase Rate
+    type: ratio
+    numerator: customers_with_orders
+    denominator: customer_count
+
+  - name: average_orders_per_customer
+    description: "Average number of orders per customer."
+    label: Average Orders per Customer
+    type: ratio
+    numerator: total_number_of_orders
+    denominator: customer_count
+
+  - name: customers_with_lifetime_value_over_20
+    description: "Number of customers whose lifetime value is greater than 20."
+    label: Customers With Lifetime Value Over 20
+    type: derived
+    expr: customers_over_20
+    input_metrics:
+      - name: customer_count
+        alias: customers_over_20
+        filter: |
+          {{ Dimension('customer__lifetime_value') }} > 20
+
