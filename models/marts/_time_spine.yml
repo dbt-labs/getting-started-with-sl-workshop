@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: metricflow_time_spine
+    description: one row per day used by metricflow for time-based joins and cumulative metrics.
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        description: calendar date at daily grain for metricflow time joins.
+        granularity: day
