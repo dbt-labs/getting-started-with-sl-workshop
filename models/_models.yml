@@ -1,0 +1,76 @@
+models:
+  - name: time_spine_daily
+    description: A time spine with one row per day, ranging from 5 years in the past to 30 days into the future.
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        description: The base date column for daily granularity
+        granularity: day
+
+  - name: fct_orders
+    description: Order-level fact table with one row per order and collected payment amount.
+    semantic_model: true
+    agg_time_dimension: order_date
+    columns:
+      - name: order_id
+        description: Primary key for the order.
+        entity:
+          type: primary
+          name: order_id
+      - name: customer_id
+        description: Customer who placed the order.
+        entity:
+          type: foreign
+          name: customer
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+      - name: amount
+        description: Collected payment amount for the order.
+    metrics:
+      - name: revenue
+        description: Total collected revenue from successful order payments.
+        type: simple
+        agg: sum
+        expr: amount
+      - name: order_count
+        description: Count of orders.
+        type: simple
+        agg: count_distinct
+        expr: order_id
+      - name: average_order_value
+        description: Average collected payment amount per order.
+        type: simple
+        agg: average
+        expr: amount
+
+  - name: dim_customers
+    description: Customer dimension with names and order history attributes.
+    semantic_model: true
+    columns:
+      - name: customer_id
+        description: Primary key for the customer.
+        entity:
+          type: primary
+          name: customer
+      - name: first_name
+        description: Customer first name.
+        dimension:
+          type: categorical
+      - name: last_name
+        description: Customer last name.
+        dimension:
+          type: categorical
+      - name: first_order_date
+        description: Date of the customer's first order.
+        granularity: day
+        dimension:
+          type: time
+      - name: most_recent_order_date
+        description: Date of the customer's most recent order.
+        granularity: day
+        dimension:
+          type: time
