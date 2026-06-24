@@ -1,0 +1,89 @@
+models:
+  - name: fct_orders
+    semantic_model: 
+      enabled: true
+    agg_time_dimension: order_date
+    description: Fact table at the order grain with one row per order and successful payment amount rolled up from staging payments.
+    columns:
+      # Entities
+      - name: order_id
+        description: unique identifier for the order
+        data_tests:
+          - not_null
+          - unique
+        entity:
+          type: primary
+          name: order_id
+      - name: customer_id
+        entity:
+          name: customer_id
+          type: foreign
+      - name: order_date
+        granularity: day
+        dimension:
+          type: time
+      - name: amount
+        dimension:
+          type: categorical
+
+    metrics:
+      - name: revenue
+        type: simple
+        agg: sum
+        expr: amount
+
+      - name: avg_revenue
+        label: simple metric for avg amount
+        type: simple
+        agg: average
+        expr: amount
+
+      - name: distinct_customers
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+
+      - name: distinct_orders
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+      - name: amount_percentile
+        type: simple
+        agg: percentile
+        expr: amount
+        percentile: 0.99
+
+      - name: orders_over_twnty
+        type: simple
+        agg: sum
+        expr: 1  
+        filter: |
+          {{Dimension('order_id__amount')}} >= 20
+
+      - name: large_orders_percentage
+        type: ratio
+        numerator: orders_over_twnty
+        denominator: distinct_orders
+
+      - name: avg_order_value
+        type: ratio
+        numerator: revenue
+        denominator: distinct_orders        
+
+      - name: cum_rev
+        type: cumulative
+        input_metric: revenue
+        window: 30 days
+
+      - name: cum_rev_mtd
+        type: cumulative
+        input_metric: revenue
+        grain_to_date: month
+
+      - name: large_orders_percentage_derived
+        type: derived
+        expr: orders_over_twnty / distinct_orders
+        input_metrics:
+          - name: orders_over_twnty
+          - name: distinct_orders
