@@ -1,0 +1,137 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model: 
+      enabled: true
+    agg_time_dimension: order_date
+    description: Fact table at the order grain with one row per order. Joins staged orders to successful Stripe payments and aggregates payment amount into total order revenue in dollars.
+    columns:
+      ## Entities
+      - name: order_id
+        description: Primary key for the order.
+        data_tests:
+          - not_null
+          - unique
+        entity:
+          type: primary
+          name: order_id
+
+      - name: customer_id
+        description: Unique identifier for the customer who placed the order.
+        data_tests:
+          - not_null
+        entity: 
+          type: foreign
+          name: customer_id
+
+      ## Dimensions
+      - name: order_date
+        description: Date the order was placed.
+        data_tests:
+          - not_null
+        granularity: day
+        dimension: 
+          type: time
+
+      - name: amount ## used for filtering later
+        description: Total successful payment amount for the order in dollars. Orders without a successful payment default to 0.
+        data_tests:
+          - not_null
+        dimension: 
+          type: categorical
+
+      ## Metrics
+    metrics:
+      - name: distinct_orders
+        description: count orders
+        type: simple
+        label: Distinct Orders
+        agg: count_distinct
+        expr: order_id    
+
+      - name: order_total
+        description: The total amount for each order including taxes
+        type: simple
+        label: Order total
+        agg: sum
+        expr: amount
+
+      - name: avg_order_total
+        description: Avg Order total
+        type: simple
+        label: Simple metric of avg order
+        agg: average
+        expr: amount
+
+      - name: distinct_customers
+        description: Distinct count of customers placing orders
+        type: simple
+        label: Distinct customers
+        agg: count_distinct
+        expr: customer_id
+
+      - name: order_value_p99
+        type: simple
+        label: Order value P99
+        agg: percentile
+        expr: amount
+        percentile: 99.0
+        percentile_type: continuous
+
+      - name: order_value_discrete_p99
+        type: simple
+        label: Order value discrete P99
+        agg: percentile
+        expr: amount
+        percentile: 99.0
+        percentile_type: discrete
+
+      - name: orders_over_twenty
+        description: Count of orders with order total over 20
+        type: simple
+        label: Large orders
+        agg: sum
+        expr: 1
+        filter: |
+          {{ Dimension('order_id__amount') }} >= 20
+
+## Advanced metris
+metrics:
+  ## Ratio metrics
+  - name: large_orders_percentage
+    type: ratio
+    numerator: orders_over_twenty
+    denominator: distinct_orders
+
+  - name: avg_order_value
+    label: Ratio metric of order total devided by distinct orders
+    type: ratio
+    numerator: order_total
+    denominator: distinct_orders
+
+  ## Cumulative metrics
+  - name: cumulative_order_total_30d
+    type: cumulative
+    input_metric: order_total
+    window: 30 days
+
+  - name: cumulative_order_total_mtd
+    type: cumulative
+    input_metric: order_total
+    grain_to_date: month
+
+  - name: cumulative_order_total_all
+    type: cumulative
+    input_metric: order_total
+
+  ## Derived metrics
+  - name: pct_large_orders
+    label: Derived metric calculating large orders percentage
+    type: derived
+    expr: large_orders / order_total
+    input_metrics:
+      - name: orders_over_twenty
+        alias: large_orders
+      - name: distinct_orders
+        alias: order_total
