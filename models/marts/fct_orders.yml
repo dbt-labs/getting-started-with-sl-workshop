@@ -135,3 +135,21 @@ metrics:
         alias: large_orders
       - name: distinct_orders
         alias: order_total
+
+saved_queries:
+  - name: order_metrics
+    label: example
+    query_params:
+      metrics:
+        - pct_large_orders
+        - order_total
+        - distinct_orders
+        - orders_over_twenty
+      group_by:
+        - TimeDimension('__order_date', 'day') 
+    exports:
+      - name: order_metrics
+        config: 
+          export_as: table
+          schema: analytics
+      
