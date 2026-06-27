@@ -1,0 +1,1 @@
+select * from dbt_workshop_TTAL_770168_analytics.order_metrics
