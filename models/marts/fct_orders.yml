@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: fct_orders
+    semantic_model: 
+      enabled: true
+    agg_time_dimension: order_date
+    description: >
+      One row per order with the associated customer, order date, and the total
+      successful payment amount collected for that order.
+
+    columns:
+      - name: order_id
+        description: Primary key for the order.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: Foreign key to the customer who placed the order.
+        data_tests:
+          - not_null
+
+      - name: order_date
+        description: Date the order was placed.
+        data_tests:
+          - not_null
+
+      - name: amount
+        description: Total successful payment amount for the order in dollars.
+        data_tests:
+          - not_null
