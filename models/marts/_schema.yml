@@ -1,0 +1,223 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: Fact table at the order grain with one row per order and the successfully captured payment amount for that order.
+    semantic_model: 
+      enabled: true
+    agg_time_dimension: order_date
+    columns:
+      ## entities
+      - name: order_id
+        description: Primary key for the order.
+        entity:
+          type: primary
+          name: order_id        
+        data_tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: Foreign key to the customer who placed the order.
+        entity:
+          name: customer_id
+          type: foreign
+
+      ## dimensions    
+      - name: order_date
+        description: Date the order was placed.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: amount 
+        description: Total successful payment amount recorded for the order. Defaults to 0 when no successful payment exists.
+        dimension:    ## used for filtering
+          type: categorical
+
+    metrics:
+      - name: revenue
+        type: simple
+        agg:  sum
+        expr: amount
+      
+      - name: avg_revenue
+        label: Simple metric average amount
+        type: simple
+        agg:  average
+        expr: amount
+
+      - name: order_count
+        type: simple
+        agg:  count_distinct
+        expr: order_id
+      
+      - name: distict_customer
+        type: simple
+        agg:  count_distinct
+        expr: customer_id
+
+      - name: order_value_p99
+        type: simple
+        agg:  percentile
+        expr: amount
+        percentile: 0.99
+        percentile_type: continuous
+
+      - name: order_value_discrete_p99
+        type: simple
+        agg:  percentile
+        expr: amount
+        percentile: 0.99
+        percentile_type: discrete
+
+      - name: orders_over_20
+        description: Count of orders with order total over 20
+        type: simple
+        label: Large orders ## what it will show in BI Tool
+        agg: sum
+        expr: 1
+        filter: |       ## entity__dimension
+          {{ Dimension('order_id__amount') }} >= 20        
+
+
+  - name: dim_customers
+    description: Customer dimension with one row per customer, including basic customer attributes and order lifecycle summary fields derived from `fct_orders`.
+    semantic_model:
+      enabled: true
+    agg_time_dimension: most_recent_order_date
+    columns:
+      - name: customer_id
+        description: Primary key for the customer.
+        entity:
+          type: primary
+          name: customer_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: first_name
+        description: Customer's first name from `stg_customers`.
+        dimension:
+          type: categorical
+
+      - name: last_name
+        description: Customer's last name from `stg_customers`.
+        dimension:
+          type: categorical
+
+      - name: first_order_date
+        description: Date of the customer's first recorded order.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: most_recent_order_date
+        description: Date of the customer's most recent recorded order.
+        granularity: day
+        dimension:
+          type: time
+
+      - name: number_of_orders
+        description: Total number of orders placed by the customer. Defaults to 0 when the customer has no matching orders.
+        dimension:
+          type: categorical
+        data_tests:
+          - not_null
+
+      - name: lifetime_value
+        description: Sum of order amount across all recorded orders for the customer.
+        dimension:
+          type: categorical
+
+    metrics:
+      - name: customer_count
+        description: Distinct count of customers in the customer dimension.
+        type: simple
+        label: Customer Count
+        agg: count_distinct
+        expr: customer_id
+
+      - name: total_customer_lifetime_value
+        description: Sum of customer lifetime value across all customers.
+        type: simple
+        label: Total Customer Lifetime Value
+        agg: sum
+        expr: lifetime_value
+
+      - name: avg_customer_lifetime_value
+        description: Average lifetime value per customer.
+        type: simple
+        label: Average Customer Lifetime Value
+        agg: average
+        expr: lifetime_value
+
+      - name: repeat_customer_count
+        description: Count of customers with more than one order.
+        type: simple
+        label: Repeat Customer Count
+        agg: count_distinct
+        expr: customer_id
+        filter: |
+          {{ Dimension('customer_id__number_of_orders') }} > 1
+
+      - name: repeat_customer_rate
+        description: Share of customers who have placed more than one order.
+        type: ratio
+        label: Repeat Customer Rate
+        numerator: repeat_customer_count
+        denominator: customer_count
+
+      - name: customers_with_lifetime_value_over_100
+        description: Number of customers whose lifetime value is greater than 100.
+        type: derived
+        label: Customers with Lifetime Value Over 100
+        expr: high_value_customers
+        input_metrics:
+          - name: customer_count
+            alias: high_value_customers
+            filter: |
+              {{ Dimension('customer_id__lifetime_value') }} > 100
+
+
+
+
+## Advanced Metrics
+metrics:
+  ## Ratio Metrics
+  - name: large_orders_percentage
+    label: Ratio metric alculating large orders percentage
+    type: ratio
+    numerator: orders_over_20
+    denominator: order_count
+
+  - name: avg_order_value
+    label: Ratio metric of revenue divided by distict orders
+    type: ratio
+    numerator: revenue
+    denominator: order_count
+
+  ## Cumulative Metrics
+  - name: cumulative_revenue_last_30_days
+    type: cumulative
+    input_metric: revenue
+    window: 30 days
+
+  - name: cumulative_revenue_mtd
+    type: cumulative
+    input_metric: revenue
+    grain_to_date: month
+
+  - name: cumulative_revenue_all_time
+    type: cumulative
+    input_metric: revenue    
+
+  ## Derived (Calculation) Metric
+  - name: large_orders_percentage_derived
+    label: Derived metric calculating large orders percentage
+    type: derived
+    expr: orders_over_20 / order_count
+    input_metrics: 
+      - name: orders_over_20
+      - name: order_count
+
