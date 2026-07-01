@@ -221,3 +221,22 @@ metrics:
       - name: orders_over_20
       - name: order_count
 
+saved_queries:
+  - name: order_metrics
+    label: example
+    query_params:
+      metrics:
+        - large_orders_percentage
+        - revenue
+        - order_count
+        - orders_over_20
+      group_by:
+        - TimeDimension('__order_date', 'day')
+    exports:
+      - name: order_metrics
+        config: 
+          export_as: table
+          schema: analytics
+      
+        
+      
